@@ -1,12 +1,12 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { Intern, Task, TaskStatus } from '@/types';
+import type { Intern, Task, TaskStatus, TaskAttachment } from '@/types';
 import { mockInterns, mockTasks } from '@/services/mockData';
 
 interface InternContextType {
   interns: Intern[];
   currentInternTasks: Task[];
   setCurrentInternTasks: (tasks: Task[]) => void;
-  submitTask: (taskId: string) => void;
+  submitTask: (taskId: string, attachments?: TaskAttachment[]) => void;
   reviewTask: (internId: string, taskId: string, status: 'approved' | 'rejected', feedback: string) => void;
   getInternById: (id: string) => Intern | undefined;
 }
@@ -17,11 +17,16 @@ export function InternProvider({ children }: { children: React.ReactNode }) {
   const [interns, setInterns] = useState<Intern[]>(mockInterns);
   const [currentInternTasks, setCurrentInternTasks] = useState<Task[]>(mockTasks);
 
-  const submitTask = useCallback((taskId: string) => {
+  const submitTask = useCallback((taskId: string, attachments?: TaskAttachment[]) => {
     setCurrentInternTasks((prev) =>
       prev.map((task) =>
         task.id === taskId
-          ? { ...task, status: 'pending' as TaskStatus, submittedAt: new Date().toISOString() }
+          ? { 
+              ...task, 
+              status: 'pending' as TaskStatus, 
+              submittedAt: new Date().toISOString(),
+              attachments: attachments || task.attachments,
+            }
           : task
       )
     );

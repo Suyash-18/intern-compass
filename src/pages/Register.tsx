@@ -9,13 +9,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Briefcase, ArrowRight, ArrowLeft, Check } from 'lucide-react';
+import { Briefcase, ArrowRight, ArrowLeft, Check, User, BookOpen, GraduationCap } from 'lucide-react';
 import type { RegistrationFormData } from '@/types';
 
 const steps = [
-  { label: 'Account', description: 'Basic details' },
-  { label: 'Personal', description: 'About you' },
-  { label: 'College', description: 'Education' },
+  { label: 'Account', description: 'Basic details', icon: User },
+  { label: 'Personal', description: 'About you', icon: BookOpen },
+  { label: 'College', description: 'Education', icon: GraduationCap },
 ];
 
 const domains = [
@@ -139,26 +139,33 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-2xl mx-auto animate-fade-in">
-        {/* Logo/Brand */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary text-primary-foreground mb-3">
-            <Briefcase className="h-7 w-7" />
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="bg-foreground text-background py-6 px-4">
+        <div className="max-w-2xl mx-auto flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-primary flex items-center justify-center">
+            <Briefcase className="h-6 w-6 text-primary-foreground" />
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Prima Interns</h1>
-          <p className="text-muted-foreground mt-1">Complete your registration</p>
+          <div>
+            <h1 className="text-xl font-bold">Prima Interns</h1>
+            <p className="text-background/70 text-sm">Complete your registration</p>
+          </div>
         </div>
+      </div>
 
+      <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
         {/* Progress Bar */}
         <div className="mb-8">
           <ProgressBar currentStep={currentStep} steps={steps} />
         </div>
 
-        <Card className="border-0 shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-xl">
-              Step {currentStep}: {steps[currentStep - 1].label} Information
+        <Card className="border-0 shadow-2xl">
+          <CardHeader className="bg-foreground/5 rounded-t-lg border-b">
+            <CardTitle className="text-xl flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
+                <span className="text-primary-foreground font-bold">{currentStep}</span>
+              </div>
+              {steps[currentStep - 1].label} Information
             </CardTitle>
             <CardDescription>
               {currentStep === 1 && 'Create your account with basic details'}
@@ -166,8 +173,8 @@ export default function Register() {
               {currentStep === 3 && 'Add your educational background'}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          <CardContent className="pt-6">
+            <div className="space-y-5">
               {/* Step 1: Account */}
               {currentStep === 1 && (
                 <>
@@ -179,7 +186,7 @@ export default function Register() {
                         placeholder="Enter your full name"
                         value={formData.name}
                         onChange={(e) => updateField('name', e.target.value)}
-                        className="h-11"
+                        className="h-12"
                       />
                     </div>
                     <div className="space-y-2">
@@ -190,7 +197,7 @@ export default function Register() {
                         placeholder="Enter your email"
                         value={formData.email}
                         onChange={(e) => updateField('email', e.target.value)}
-                        className="h-11"
+                        className="h-12"
                       />
                     </div>
                   </div>
@@ -201,7 +208,7 @@ export default function Register() {
                       placeholder="+91 XXXXX XXXXX"
                       value={formData.mobile}
                       onChange={(e) => updateField('mobile', e.target.value)}
-                      className="h-11"
+                      className="h-12"
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -213,7 +220,7 @@ export default function Register() {
                         placeholder="Min. 6 characters"
                         value={formData.password}
                         onChange={(e) => updateField('password', e.target.value)}
-                        className="h-11"
+                        className="h-12"
                       />
                     </div>
                     <div className="space-y-2">
@@ -224,7 +231,7 @@ export default function Register() {
                         placeholder="Re-enter password"
                         value={formData.confirmPassword}
                         onChange={(e) => updateField('confirmPassword', e.target.value)}
-                        className="h-11"
+                        className="h-12"
                       />
                     </div>
                   </div>
@@ -242,13 +249,13 @@ export default function Register() {
                         type="date"
                         value={formData.dob}
                         onChange={(e) => updateField('dob', e.target.value)}
-                        className="h-11"
+                        className="h-12"
                       />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="domain">Domain of Interest *</Label>
                       <Select value={formData.domain} onValueChange={(v) => updateField('domain', v)}>
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select domain" />
                         </SelectTrigger>
                         <SelectContent>
@@ -294,14 +301,14 @@ export default function Register() {
                       placeholder="Enter your college name"
                       value={formData.collegeName}
                       onChange={(e) => updateField('collegeName', e.target.value)}
-                      className="h-11"
+                      className="h-12"
                     />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="degree">Degree *</Label>
                       <Select value={formData.degree} onValueChange={(v) => updateField('degree', v)}>
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select degree" />
                         </SelectTrigger>
                         <SelectContent>
@@ -316,7 +323,7 @@ export default function Register() {
                     <div className="space-y-2">
                       <Label htmlFor="yearOfPassing">Year of Passing *</Label>
                       <Select value={formData.yearOfPassing} onValueChange={(v) => updateField('yearOfPassing', v)}>
-                        <SelectTrigger className="h-11">
+                        <SelectTrigger className="h-12">
                           <SelectValue placeholder="Select year" />
                         </SelectTrigger>
                         <SelectContent>
@@ -336,23 +343,23 @@ export default function Register() {
                       placeholder="e.g., Computer Science, Electronics"
                       value={formData.branch}
                       onChange={(e) => updateField('branch', e.target.value)}
-                      className="h-11"
+                      className="h-12"
                     />
                   </div>
                 </>
               )}
 
               {/* Navigation Buttons */}
-              <div className="flex justify-between pt-4">
+              <div className="flex justify-between pt-6 border-t">
                 <Button
                   variant="outline"
                   onClick={currentStep === 1 ? () => navigate('/login') : handleBack}
-                  className="h-11"
+                  className="h-12 px-6"
                 >
                   <ArrowLeft className="mr-2 h-4 w-4" />
                   {currentStep === 1 ? 'Back to Login' : 'Previous'}
                 </Button>
-                <Button onClick={handleNext} disabled={isLoading} className="h-11">
+                <Button onClick={handleNext} disabled={isLoading} className="h-12 px-6">
                   {isLoading ? (
                     'Processing...'
                   ) : currentStep === 3 ? (
