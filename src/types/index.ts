@@ -29,6 +29,15 @@ export interface InternProfile {
 
 export type TaskStatus = 'locked' | 'in_progress' | 'pending' | 'approved' | 'rejected';
 
+export interface TaskAttachment {
+  id: string;
+  name: string;
+  type: 'pdf' | 'image' | 'zip' | 'other';
+  size: number;
+  url: string;
+  mimeType: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -37,6 +46,7 @@ export interface Task {
   feedback?: string;
   submittedAt?: string;
   reviewedAt?: string;
+  attachments?: TaskAttachment[];
 }
 
 export interface Intern {

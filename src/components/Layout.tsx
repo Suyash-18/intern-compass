@@ -41,8 +41,8 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-card border-b shadow-sm">
+      {/* Header - Dark Theme */}
+      <header className="sticky top-0 z-50 bg-foreground text-background shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -50,7 +50,7 @@ export function Layout({ children }: LayoutProps) {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <Briefcase className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-semibold text-lg hidden sm:block">Prima Interns</span>
+              <span className="font-bold text-lg hidden sm:block">Prima Interns</span>
             </Link>
 
             {/* Desktop Navigation */}
@@ -65,7 +65,7 @@ export function Layout({ children }: LayoutProps) {
                       'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                       isActive
                         ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        : 'text-background/70 hover:text-background hover:bg-background/10'
                     )}
                   >
                     <item.icon className="h-4 w-4" />
@@ -78,10 +78,16 @@ export function Layout({ children }: LayoutProps) {
             {/* User Info & Logout */}
             <div className="flex items-center gap-4">
               <div className="hidden sm:block text-right">
-                <p className="text-sm font-medium">{user?.profile?.name || user?.email}</p>
-                <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+                <p className="text-sm font-medium text-background">{user?.profile?.name || user?.email}</p>
+                <p className="text-xs text-background/60 capitalize">{user?.role}</p>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleLogout} 
+                title="Logout"
+                className="text-background hover:text-background hover:bg-background/10"
+              >
                 <LogOut className="h-5 w-5" />
               </Button>
               
@@ -89,7 +95,7 @@ export function Layout({ children }: LayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden"
+                className="md:hidden text-background hover:text-background hover:bg-background/10"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -100,7 +106,7 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t bg-card">
+          <div className="md:hidden border-t border-background/10">
             <nav className="px-4 py-2 space-y-1">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
@@ -113,7 +119,7 @@ export function Layout({ children }: LayoutProps) {
                       'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
                       isActive
                         ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        : 'text-background/70 hover:text-background hover:bg-background/10'
                     )}
                   >
                     <item.icon className="h-5 w-5" />
