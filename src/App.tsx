@@ -10,7 +10,12 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AdminInterns from "./pages/AdminInterns";
+import AdminInternDetails from "./pages/AdminInternDetails";
 import AdminTasks from "./pages/AdminTasks";
+import AdminAddTask from "./pages/AdminAddTask";
+import AdminTaskTemplates from "./pages/AdminTaskTemplates";
+import AdminReports from "./pages/AdminReports";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -69,9 +74,36 @@ function AppRoutes() {
           <AdminInterns />
         </ProtectedRoute>
       } />
+      <Route path="/admin/interns/:id" element={
+        <ProtectedRoute requiredRole="admin">
+          <AdminInternDetails />
+        </ProtectedRoute>
+      } />
       <Route path="/admin/tasks" element={
         <ProtectedRoute requiredRole="admin">
           <AdminTasks />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/tasks/new" element={
+        <ProtectedRoute requiredRole="admin">
+          <AdminAddTask />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/templates" element={
+        <ProtectedRoute requiredRole="admin">
+          <AdminTaskTemplates />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/reports" element={
+        <ProtectedRoute requiredRole="admin">
+          <AdminReports />
+        </ProtectedRoute>
+      } />
+      
+      {/* Common Routes */}
+      <Route path="/settings" element={
+        <ProtectedRoute>
+          <Settings />
         </ProtectedRoute>
       } />
       

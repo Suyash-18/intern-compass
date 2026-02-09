@@ -65,6 +65,18 @@ export const API_ENDPOINTS = {
       `/tasks/${taskId}/attachments/${attachmentId}`,
     DOWNLOAD_ATTACHMENT: (taskId: string, attachmentId: string) => 
       `/tasks/${taskId}/attachments/${attachmentId}/download`,
+    ASSIGN: '/tasks/assign',
+    BULK_ASSIGN: '/tasks/bulk-assign',
+  },
+
+  // Task templates endpoints (Admin)
+  TASK_TEMPLATES: {
+    LIST: '/task-templates',
+    GET_BY_ID: (id: string) => `/task-templates/${id}`,
+    CREATE: '/task-templates',
+    UPDATE: (id: string) => `/task-templates/${id}`,
+    DELETE: (id: string) => `/task-templates/${id}`,
+    DUPLICATE: (id: string) => `/task-templates/${id}/duplicate`,
   },
 
   // Dashboard/Analytics endpoints
@@ -72,6 +84,23 @@ export const API_ENDPOINTS = {
     INTERN_STATS: '/dashboard/intern-stats',
     ADMIN_STATS: '/dashboard/admin-stats',
     PROGRESS_OVERVIEW: '/dashboard/progress',
+  },
+
+  // Reports endpoints (Admin)
+  REPORTS: {
+    SUMMARY: '/reports/summary',
+    INTERN_PROGRESS: '/reports/intern-progress',
+    TASK_COMPLETION: '/reports/task-completion',
+    DOMAIN_DISTRIBUTION: '/reports/domain-distribution',
+    EXPORT_PDF: '/reports/export/pdf',
+  },
+
+  // Settings endpoints
+  SETTINGS: {
+    GET: '/settings',
+    UPDATE: '/settings',
+    CHANGE_PASSWORD: '/settings/password',
+    NOTIFICATIONS: '/settings/notifications',
   },
 } as const;
 

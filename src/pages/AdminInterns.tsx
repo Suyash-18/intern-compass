@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { useInterns } from '@/contexts/InternContext';
 import { Input } from '@/components/ui/input';
@@ -19,11 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Search, Download, FileSpreadsheet, Users, Eye, CheckCircle, Clock, Trophy } from 'lucide-react';
+import { Search, Download, FileSpreadsheet, Users, Eye, CheckCircle, Clock, Trophy, ExternalLink } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import type { Intern } from '@/types';
 
 export default function AdminInterns() {
+  const navigate = useNavigate();
   const { interns } = useInterns();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIntern, setSelectedIntern] = useState<Intern | null>(null);
@@ -261,15 +263,26 @@ export default function AdminInterns() {
                             </div>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedIntern(intern)}
-                              className="gap-2"
-                            >
-                              <Eye className="h-4 w-4" />
-                              <span className="hidden sm:inline">View</span>
-                            </Button>
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedIntern(intern)}
+                                className="gap-2"
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span className="hidden sm:inline">Quick View</span>
+                              </Button>
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => navigate(`/admin/interns/${intern.id}`)}
+                                className="gap-2"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                                <span className="hidden sm:inline">Details</span>
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       );
