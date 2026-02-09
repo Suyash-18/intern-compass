@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { useInterns } from '@/contexts/InternContext';
 import { StatusBadge } from '@/components/ui/status-badge';
@@ -26,7 +27,8 @@ import {
   Archive, 
   Download, 
   Eye,
-  Paperclip
+  Paperclip,
+  Plus
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import type { Intern, Task, TaskAttachment } from '@/types';
@@ -57,6 +59,7 @@ function formatFileSize(bytes: number): string {
 }
 
 export default function AdminTasks() {
+  const navigate = useNavigate();
   const { interns, reviewTask } = useInterns();
   const [selectedTask, setSelectedTask] = useState<PendingTask | null>(null);
   const [feedback, setFeedback] = useState('');
@@ -159,13 +162,24 @@ export default function AdminTasks() {
       <div className="space-y-6 animate-fade-in">
         {/* Header */}
         <div className="bg-foreground text-background rounded-2xl p-6 md:p-8">
-          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-            <ClipboardList className="h-8 w-8" />
-            Task Review
-          </h1>
-          <p className="text-background/70 mt-2">
-            Review and approve intern task submissions
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
+                <ClipboardList className="h-8 w-8" />
+                Task Review
+              </h1>
+              <p className="text-background/70 mt-2">
+                Review and approve intern task submissions
+              </p>
+            </div>
+            <Button 
+              onClick={() => navigate('/admin/tasks/new')}
+              className="bg-primary hover:bg-primary/90"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add New Task
+            </Button>
+          </div>
         </div>
 
         {/* Stats */}

@@ -8,7 +8,11 @@ import {
   ClipboardList, 
   LogOut,
   Menu,
-  X
+  X,
+  Plus,
+  LayoutTemplate,
+  BarChart3,
+  Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
@@ -27,8 +31,11 @@ export function Layout({ children }: LayoutProps) {
 
   const navigation = isAdmin
     ? [
-        { name: 'Intern Management', href: '/admin', icon: Users },
+        { name: 'Interns', href: '/admin', icon: Users },
         { name: 'Task Review', href: '/admin/tasks', icon: ClipboardList },
+        { name: 'Add Task', href: '/admin/tasks/new', icon: Plus },
+        { name: 'Templates', href: '/admin/templates', icon: LayoutTemplate },
+        { name: 'Reports', href: '/admin/reports', icon: BarChart3 },
       ]
     : [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -54,7 +61,7 @@ export function Layout({ children }: LayoutProps) {
             </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden md:flex items-center gap-1">
+            <nav className="hidden lg:flex items-center gap-1">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
@@ -62,7 +69,7 @@ export function Layout({ children }: LayoutProps) {
                     key={item.name}
                     to={item.href}
                     className={cn(
-                      'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
+                      'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
                       isActive
                         ? 'bg-primary text-primary-foreground'
                         : 'text-background/70 hover:text-background hover:bg-background/10'
@@ -75,12 +82,24 @@ export function Layout({ children }: LayoutProps) {
               })}
             </nav>
 
-            {/* User Info & Logout */}
-            <div className="flex items-center gap-4">
+            {/* User Info & Actions */}
+            <div className="flex items-center gap-2 sm:gap-4">
               <div className="hidden sm:block text-right">
                 <p className="text-sm font-medium text-background">{user?.profile?.name || user?.email}</p>
                 <p className="text-xs text-background/60 capitalize">{user?.role}</p>
               </div>
+              
+              {/* Settings Button */}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate('/settings')} 
+                title="Settings"
+                className="text-background hover:text-background hover:bg-background/10"
+              >
+                <Settings className="h-5 w-5" />
+              </Button>
+              
               <Button 
                 variant="ghost" 
                 size="icon" 
@@ -95,7 +114,7 @@ export function Layout({ children }: LayoutProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="md:hidden text-background hover:text-background hover:bg-background/10"
+                className="lg:hidden text-background hover:text-background hover:bg-background/10"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -106,7 +125,7 @@ export function Layout({ children }: LayoutProps) {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-background/10">
+          <div className="lg:hidden border-t border-background/10">
             <nav className="px-4 py-2 space-y-1">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
@@ -127,6 +146,19 @@ export function Layout({ children }: LayoutProps) {
                   </Link>
                 );
               })}
+              <Link
+                to="/settings"
+                onClick={() => setMobileMenuOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                  location.pathname === '/settings'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-background/70 hover:text-background hover:bg-background/10'
+                )}
+              >
+                <Settings className="h-5 w-5" />
+                Settings
+              </Link>
             </nav>
           </div>
         )}
