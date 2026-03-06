@@ -4,25 +4,49 @@ A structured internal platform for onboarding and sequential task management for
 
 ## Tech Stack
 
-- **Frontend**: React 18, TypeScript, Vite
-- **Styling**: Tailwind CSS, shadcn/ui components
-- **State Management**: React Context API
-- **Routing**: React Router v6
+- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- **Backend**: Node.js, Express.js
+- **Database**: MongoDB (Mongoose ODM)
+- **Authentication**: JWT (JSON Web Tokens)
+- **File Storage**: Multer + local/S3
 
 ## Getting Started
 
+### Frontend
+
 ```bash
-# Install dependencies
+cd frontend/   # or project root
 npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
+npm run dev    # starts on http://localhost:8080
 ```
 
-## Demo Credentials
+### Backend Setup
+
+```bash
+mkdir prima-backend && cd prima-backend
+npm init -y
+npm install express mongoose dotenv cors bcryptjs jsonwebtoken multer helmet morgan express-validator
+npm install -D nodemon
+```
+
+**Backend `.env`**:
+```env
+PORT=3000
+MONGODB_URI=mongodb://localhost:27017/prima_interns
+JWT_SECRET=your_jwt_secret_key_here
+JWT_EXPIRES_IN=7d
+UPLOAD_DIR=./uploads
+CORS_ORIGIN=http://localhost:8080
+```
+
+**Frontend `.env`**:
+```env
+VITE_API_BASE_URL=http://localhost:3000/api
+```
+
+Then set `USE_MOCK_DATA = false` in `src/services/api.ts`.
+
+## Demo Credentials (Mock Mode)
 
 | Role   | Email              | Password   |
 |--------|-------------------|------------|
@@ -31,57 +55,298 @@ npm run build
 
 ---
 
-# API Integration Guide
+# Backend Development Guide
 
-This document describes all API endpoints required for the backend and their usage locations in the codebase.
+## Recommended Folder Structure
 
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file in the project root:
-
-```env
-VITE_API_BASE_URL=http://your-api-server.com/api
 ```
-
-### Toggle Mock Data
-
-In `src/services/api.ts`, set `USE_MOCK_DATA` to `false` to use real API:
-
-```typescript
-export const USE_MOCK_DATA = false; // Set to false for real API
+prima-backend/
+├── server.js                 # Entry point
+├── config/
+│   └── db.js                 # MongoDB connection
+├── middleware/
+│   ├── auth.js               # JWT verification middleware
+│   ├── admin.js              # Admin role check middleware
+│   ├── upload.js             # Multer file upload config
+│   └── errorHandler.js       # Global error handler
+├── models/
+│   ├── User.js
+│   ├── Profile.js
+│   ├── TaskTemplate.js
+│   ├── InternTask.js
+│   └── Attachment.js
+├── routes/
+│   ├── auth.js
+│   ├── users.js
+│   ├── interns.js
+│   ├── tasks.js
+│   ├── taskTemplates.js
+│   ├── dashboard.js
+│   ├── reports.js
+│   └── settings.js
+├── controllers/
+│   ├── authController.js
+│   ├── userController.js
+│   ├── internController.js
+│   ├── taskController.js
+│   ├── taskTemplateController.js
+│   ├── dashboardController.js
+│   ├── reportController.js
+│   └── settingsController.js
+├── uploads/                  # Uploaded files directory
+└── .env
 ```
 
 ---
 
-## API Endpoints Reference
+## MongoDB Schemas (Mongoose Models)
 
-### Base URL
+### User Model (`models/User.js`)
 
-All endpoints are prefixed with: `{VITE_API_BASE_URL}/v1`
+```javascript
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String, required: true, select: false },
+  role: { type: String, enum: ['intern', 'admin'], default: 'intern' },
+  registrationStep: { type: mongoose.Schema.Types.Mixed, default: 1 }, // 1 | 2 | 3 | 'complete'
+}, { timestamps: true });
+
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  this.password = await bcrypt.hash(this.password, 12);
+  next();
+});
+
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+module.exports = mongoose.model('User', userSchema);
+```
+
+### Profile Model (`models/Profile.js`)
+
+```javascript
+const mongoose = require('mongoose');
+
+const profileSchema = new mongoose.Schema({
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  name: { type: String, default: '' },
+  email: { type: String, default: '' },
+  mobile: { type: String, default: '' },
+  dob: { type: String, default: '' },
+  address: { type: String, default: '' },
+  skills: [{ type: String }],
+  domain: { type: String, default: '' },
+  collegeName: { type: String, default: '' },
+  degree: { type: String, default: '' },
+  branch: { type: String, default: '' },
+  yearOfPassing: { type: String, default: '' },
+}, { timestamps: true });
+
+module.exports = mongoose.model('Profile', profileSchema);
+```
+
+### TaskTemplate Model (`models/TaskTemplate.js`)
+
+```javascript
+const mongoose = require('mongoose');
+
+const taskTemplateSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  orderIndex: { type: Number, required: true },
+  priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
+  isActive: { type: Boolean, default: true },
+}, { timestamps: true });
+
+module.exports = mongoose.model('TaskTemplate', taskTemplateSchema);
+```
+
+### InternTask Model (`models/InternTask.js`)
+
+```javascript
+const mongoose = require('mongoose');
+
+const internTaskSchema = new mongoose.Schema({
+  internId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  taskTemplateId: { type: mongoose.Schema.Types.ObjectId, ref: 'TaskTemplate', required: true },
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  status: {
+    type: String,
+    enum: ['locked', 'in_progress', 'pending', 'approved', 'rejected'],
+    default: 'locked'
+  },
+  feedback: { type: String, default: '' },
+  submittedAt: { type: Date },
+  reviewedAt: { type: Date },
+}, { timestamps: true });
+
+module.exports = mongoose.model('InternTask', internTaskSchema);
+```
+
+### Attachment Model (`models/Attachment.js`)
+
+```javascript
+const mongoose = require('mongoose');
+
+const attachmentSchema = new mongoose.Schema({
+  internTaskId: { type: mongoose.Schema.Types.ObjectId, ref: 'InternTask', required: true },
+  name: { type: String, required: true },
+  type: { type: String, enum: ['pdf', 'image', 'zip', 'other'], required: true },
+  size: { type: Number, required: true },
+  url: { type: String, required: true },
+  mimeType: { type: String, required: true },
+}, { timestamps: true });
+
+module.exports = mongoose.model('Attachment', attachmentSchema);
+```
 
 ---
 
-## 1. Authentication Endpoints
+## Server Entry Point (`server.js`)
 
-**Service File**: `src/services/authService.ts`
+```javascript
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+require('dotenv').config();
+
+const app = express();
+
+// Middleware
+app.use(helmet());
+app.use(morgan('dev'));
+app.use(cors({ origin: process.env.CORS_ORIGIN }));
+app.use(express.json());
+app.use('/uploads', express.static('uploads'));
+
+// Routes
+app.use('/api/v1/auth', require('./routes/auth'));
+app.use('/api/v1/users', require('./routes/users'));
+app.use('/api/v1/interns', require('./routes/interns'));
+app.use('/api/v1/tasks', require('./routes/tasks'));
+app.use('/api/v1/task-templates', require('./routes/taskTemplates'));
+app.use('/api/v1/dashboard', require('./routes/dashboard'));
+app.use('/api/v1/reports', require('./routes/reports'));
+app.use('/api/v1/settings', require('./routes/settings'));
+
+// Error handler
+app.use(require('./middleware/errorHandler'));
+
+// Connect DB and start
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('MongoDB connected');
+    app.listen(process.env.PORT, () => console.log(`Server on port ${process.env.PORT}`));
+  })
+  .catch(err => console.error('DB connection failed:', err));
+```
+
+---
+
+## Middleware
+
+### Auth Middleware (`middleware/auth.js`)
+
+```javascript
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+module.exports = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'No token provided' });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id);
+    if (!req.user) return res.status(401).json({ message: 'User not found' });
+
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
+```
+
+### Admin Middleware (`middleware/admin.js`)
+
+```javascript
+module.exports = (req, res, next) => {
+  if (req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Admin access required' });
+  }
+  next();
+};
+```
+
+### Upload Middleware (`middleware/upload.js`)
+
+```javascript
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, 'uploads/'),
+  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
+});
+
+const fileFilter = (req, file, cb) => {
+  const allowed = ['.pdf', '.png', '.jpg', '.jpeg', '.zip'];
+  const ext = path.extname(file.originalname).toLowerCase();
+  cb(null, allowed.includes(ext));
+};
+
+module.exports = multer({ storage, fileFilter, limits: { fileSize: 10 * 1024 * 1024 } });
+```
+
+---
+
+# API Endpoints Reference
+
+All endpoints prefixed with: `{VITE_API_BASE_URL}/v1`
+
+## 1. Authentication — `routes/auth.js`
+
+**Frontend Service**: `src/services/authService.ts`
+
+| Method | Endpoint | Auth | Description | Frontend Usage |
+|--------|----------|------|-------------|----------------|
+| POST | `/auth/login` | No | Login | `Login.tsx`, `AuthContext.tsx` |
+| POST | `/auth/logout` | Yes | Logout | `Layout.tsx`, `AuthContext.tsx` |
+| POST | `/auth/register` | No | Register | `Register.tsx`, `AuthContext.tsx` |
+| POST | `/auth/refresh-token` | Yes | Refresh JWT | Future feature |
+| POST | `/auth/forgot-password` | No | Request reset | Future feature |
+| POST | `/auth/reset-password` | No | Reset password | Future feature |
 
 ### POST `/auth/login`
 
-Login user with email and password.
+**Controller**: `authController.login`
 
-**Used In**:
-- `src/contexts/AuthContext.tsx` → `login()` function
-- `src/pages/Login.tsx` → Login form submission
-
-**Request**:
-```json
-{
-  "email": "string",
-  "password": "string"
-}
+```javascript
+// controllers/authController.js
+exports.login = async (req, res) => {
+  const { email, password } = req.body;
+  const user = await User.findOne({ email }).select('+password');
+  if (!user || !(await user.comparePassword(password))) {
+    return res.status(401).json({ message: 'Invalid credentials' });
+  }
+  const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
+  const profile = await Profile.findOne({ userId: user._id });
+  res.json({
+    user: { id: user._id, email: user.email, role: user.role, registrationStep: user.registrationStep, profile },
+    token
+  });
+};
 ```
+
+**Request**: `{ "email": "string", "password": "string" }`
 
 **Response**:
 ```json
@@ -89,47 +354,40 @@ Login user with email and password.
   "user": {
     "id": "string",
     "email": "string",
-    "role": "intern" | "admin",
-    "registrationStep": 1 | 2 | 3 | "complete",
-    "profile": { ... } // Optional InternProfile
+    "role": "intern | admin",
+    "registrationStep": "1 | 2 | 3 | complete",
+    "profile": { ... }
   },
-  "token": "string" // JWT token
+  "token": "jwt_token_string"
 }
 ```
 
----
+### POST `/auth/register`
+
+**Request**: `{ "name": "string", "email": "string", "mobile": "string", "password": "string" }`
+
+**Response**: Same as login response with `registrationStep: 2`
 
 ### POST `/auth/logout`
 
-Logout current user and invalidate token.
-
-**Used In**:
-- `src/contexts/AuthContext.tsx` → `logout()` function
-- `src/components/Layout.tsx` → Logout button
-
-**Request**: No body (uses Authorization header)
+**Request**: Authorization header required, no body
 
 **Response**: `204 No Content`
 
 ---
 
-### POST `/auth/register`
+## 2. User/Profile — `routes/users.js`
 
-Register new intern account (Step 1 of registration).
+**Frontend Service**: `src/services/authService.ts`
 
-**Used In**:
-- `src/contexts/AuthContext.tsx` → `register()` function
-- `src/pages/Register.tsx` → Step 1 form submission
+| Method | Endpoint | Auth | Description | Frontend Usage |
+|--------|----------|------|-------------|----------------|
+| GET | `/users/profile` | Yes | Get profile | `AuthContext.tsx` |
+| PUT | `/users/profile` | Yes | Update profile | `Register.tsx`, `Settings.tsx` |
+| PATCH | `/users/registration-step` | Yes | Update step | `Register.tsx` |
+| POST | `/users/avatar` | Yes | Upload avatar | Future feature |
 
-**Request**:
-```json
-{
-  "name": "string",
-  "email": "string",
-  "mobile": "string",
-  "password": "string"
-}
-```
+### GET `/users/profile`
 
 **Response**:
 ```json
@@ -138,86 +396,7 @@ Register new intern account (Step 1 of registration).
     "id": "string",
     "email": "string",
     "role": "intern",
-    "registrationStep": 2,
-    "profile": {
-      "name": "string",
-      "email": "string",
-      "mobile": "string",
-      // ... other fields empty
-    }
-  },
-  "token": "string"
-}
-```
-
----
-
-### POST `/auth/forgot-password`
-
-Request password reset email.
-
-**Used In**: Not yet implemented (future feature)
-
-**Request**:
-```json
-{
-  "email": "string"
-}
-```
-
-**Response**:
-```json
-{
-  "message": "Password reset email sent"
-}
-```
-
----
-
-### POST `/auth/reset-password`
-
-Reset password with token.
-
-**Used In**: Not yet implemented (future feature)
-
-**Request**:
-```json
-{
-  "token": "string",
-  "password": "string"
-}
-```
-
-**Response**:
-```json
-{
-  "message": "Password reset successful"
-}
-```
-
----
-
-## 2. User/Profile Endpoints
-
-**Service File**: `src/services/authService.ts`
-
-### GET `/users/profile`
-
-Get current user's profile.
-
-**Used In**:
-- `src/contexts/AuthContext.tsx` → Initial auth check on app load
-
-**Request**: No body (uses Authorization header)
-
-**Response**:
-```json
-{
-  "user": {
-    "id": "string",
-    "email": "string",
-    "role": "intern" | "admin",
-    "registrationStep": 1 | 2 | 3 | "complete",
+    "registrationStep": "complete",
     "profile": {
       "name": "string",
       "email": "string",
@@ -235,564 +414,242 @@ Get current user's profile.
 }
 ```
 
----
-
 ### PUT `/users/profile`
 
-Update user profile (used during registration steps 2 & 3).
+**Request** (Step 2): `{ "dob": "string", "address": "string", "skills": ["string"], "domain": "string" }`
 
-**Used In**:
-- `src/contexts/AuthContext.tsx` → `updateProfile()` function
-- `src/pages/Register.tsx` → Steps 2 and 3 form submission
-
-**Request** (Step 2 - Personal Details):
-```json
-{
-  "dob": "string",
-  "address": "string",
-  "skills": ["string"],
-  "domain": "string"
-}
-```
-
-**Request** (Step 3 - College Details):
-```json
-{
-  "collegeName": "string",
-  "degree": "string",
-  "branch": "string",
-  "yearOfPassing": "string"
-}
-```
-
-**Response**:
-```json
-{
-  "user": { ... } // Updated user object
-}
-```
-
----
+**Request** (Step 3): `{ "collegeName": "string", "degree": "string", "branch": "string", "yearOfPassing": "string" }`
 
 ### PATCH `/users/registration-step`
 
-Update user's registration step.
-
-**Used In**:
-- `src/contexts/AuthContext.tsx` → `updateRegistrationStep()` function
-- `src/pages/Register.tsx` → After each step completion
-
-**Request**:
-```json
-{
-  "step": 1 | 2 | 3 | "complete"
-}
-```
-
-**Response**:
-```json
-{
-  "user": { ... } // Updated user object
-}
-```
+**Request**: `{ "step": 1 | 2 | 3 | "complete" }`
 
 ---
 
-## 3. Intern Management Endpoints (Admin)
+## 3. Intern Management (Admin) — `routes/interns.js`
 
-**Service File**: `src/services/internService.ts`
+**Frontend Service**: `src/services/internService.ts`
+
+| Method | Endpoint | Auth | Admin | Description | Frontend Usage |
+|--------|----------|------|-------|-------------|----------------|
+| GET | `/interns` | Yes | Yes | List all | `AdminInterns.tsx` |
+| GET | `/interns/:id` | Yes | Yes | Get one | `AdminInternDetails.tsx` |
+| PUT | `/interns/:id` | Yes | Yes | Update | Future feature |
+| DELETE | `/interns/:id` | Yes | Yes | Delete | Future feature |
+| GET | `/interns/search?q=` | Yes | Yes | Search | `AdminInterns.tsx` |
+| GET | `/interns/export/csv` | Yes | Yes | Export CSV | `AdminInterns.tsx` |
+| GET | `/interns/export/excel` | Yes | Yes | Export Excel | `AdminInterns.tsx` |
 
 ### GET `/interns`
 
-Get list of all registered interns.
-
-**Used In**:
-- `src/contexts/InternContext.tsx` → Initial data load
-- `src/pages/AdminInterns.tsx` → Interns table
-
-**Query Parameters**:
-- `page` (optional): Page number for pagination
-- `limit` (optional): Items per page
-- `sort` (optional): Sort field and direction (e.g., "name:asc")
+**Query Params**: `page`, `limit`, `sort`
 
 **Response**:
 ```json
 {
-  "interns": [
-    {
-      "id": "string",
-      "profile": {
-        "name": "string",
-        "email": "string",
-        "mobile": "string",
-        "dob": "string",
-        "address": "string",
-        "skills": ["string"],
-        "domain": "string",
-        "collegeName": "string",
-        "degree": "string",
-        "branch": "string",
-        "yearOfPassing": "string"
-      },
-      "tasks": [
-        {
-          "id": "string",
-          "title": "string",
-          "description": "string",
-          "status": "locked" | "in_progress" | "pending" | "approved" | "rejected",
-          "feedback": "string",
-          "submittedAt": "string",
-          "reviewedAt": "string",
-          "attachments": [...]
-        }
-      ],
-      "registrationCompleted": true,
-      "registeredAt": "string"
-    }
-  ],
+  "interns": [{
+    "id": "string",
+    "profile": { "name": "string", "email": "string", ... },
+    "tasks": [{ "id": "string", "title": "string", "status": "string", ... }],
+    "registrationCompleted": true,
+    "registeredAt": "ISO date"
+  }],
   "total": 100,
   "page": 1,
   "limit": 10
 }
 ```
 
----
-
 ### GET `/interns/:id`
 
-Get single intern by ID.
-
-**Used In**:
-- `src/contexts/InternContext.tsx` → `getInternById()` function
-- `src/pages/AdminTasks.tsx` → When viewing intern's tasks
-
-**Response**:
-```json
-{
-  "intern": { ... } // Single intern object
-}
-```
+**Response**: `{ "intern": { ... } }`
 
 ---
 
-### GET `/interns/search?q=query`
+## 4. Task Management — `routes/tasks.js`
 
-Search interns by name, email, or domain.
+**Frontend Service**: `src/services/taskService.ts`
 
-**Used In**:
-- `src/pages/AdminInterns.tsx` → Search input
-
-**Query Parameters**:
-- `q`: Search query string
-
-**Response**:
-```json
-{
-  "interns": [...] // Filtered intern list
-}
-```
-
----
-
-### PUT `/interns/:id`
-
-Update intern details.
-
-**Used In**: Not yet implemented in UI (future admin feature)
-
-**Request**:
-```json
-{
-  "profile": { ... },
-  "tasks": [ ... ]
-}
-```
-
-**Response**:
-```json
-{
-  "intern": { ... } // Updated intern object
-}
-```
-
----
-
-### DELETE `/interns/:id`
-
-Delete intern account.
-
-**Used In**: Not yet implemented in UI (future admin feature)
-
-**Response**: `204 No Content`
-
----
-
-### GET `/interns/export/csv`
-
-Export all interns data as CSV file.
-
-**Used In**:
-- `src/pages/AdminInterns.tsx` → "Export CSV" button
-
-**Response**: CSV file download
-
----
-
-### GET `/interns/export/excel`
-
-Export all interns data as Excel file.
-
-**Used In**:
-- `src/pages/AdminInterns.tsx` → "Export Excel" button
-
-**Response**: Excel (.xlsx) file download
-
----
-
-## 4. Task Management Endpoints
-
-**Service File**: `src/services/taskService.ts`
-
-### GET `/tasks`
-
-Get tasks for current logged-in intern.
-
-**Used In**:
-- `src/contexts/InternContext.tsx` → Initial task load for interns
-- `src/pages/Dashboard.tsx` → Task list display
-
-**Response**:
-```json
-{
-  "tasks": [
-    {
-      "id": "string",
-      "title": "string",
-      "description": "string",
-      "status": "locked" | "in_progress" | "pending" | "approved" | "rejected",
-      "feedback": "string",
-      "submittedAt": "string",
-      "reviewedAt": "string",
-      "attachments": [
-        {
-          "id": "string",
-          "name": "string",
-          "type": "pdf" | "image" | "zip" | "other",
-          "size": 1024,
-          "url": "string",
-          "mimeType": "string"
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
-### GET `/tasks/:id`
-
-Get single task by ID.
-
-**Used In**:
-- `src/pages/Dashboard.tsx` → Task detail view
-
-**Response**:
-```json
-{
-  "task": { ... } // Single task object
-}
-```
-
----
+| Method | Endpoint | Auth | Admin | Description | Frontend Usage |
+|--------|----------|------|-------|-------------|----------------|
+| GET | `/tasks` | Yes | No | Get intern's tasks | `Dashboard.tsx` |
+| GET | `/tasks/:id` | Yes | No | Get single task | `Dashboard.tsx` |
+| POST | `/tasks` | Yes | Yes | Create task | `AdminAddTask.tsx` |
+| PUT | `/tasks/:id` | Yes | Yes | Update task | `AdminTasks.tsx` |
+| DELETE | `/tasks/:id` | Yes | Yes | Delete task | `AdminTasks.tsx` |
+| POST | `/tasks/:id/submit` | Yes | No | Submit for review | `TaskCard.tsx` |
+| POST | `/tasks/:id/review` | Yes | Yes | Approve/reject | `AdminTasks.tsx` |
+| POST | `/tasks/:id/attachments` | Yes | No | Upload file | `TaskCard.tsx` |
+| DELETE | `/tasks/:tid/attachments/:aid` | Yes | No | Delete file | `TaskCard.tsx` |
+| GET | `/tasks/:tid/attachments/:aid/download` | Yes | Both | Download file | `AdminTasks.tsx` |
+| POST | `/tasks/assign` | Yes | Yes | Assign task | `AdminAddTask.tsx` |
+| POST | `/tasks/bulk-assign` | Yes | Yes | Bulk assign | `AdminAddTask.tsx` |
 
 ### POST `/tasks/:id/submit`
 
-Submit task for admin review.
+**Request**: `{ "attachments": [{ "id", "name", "type", "size", "url", "mimeType" }] }`
 
-**Used In**:
-- `src/contexts/InternContext.tsx` → `submitTask()` function
-- `src/components/TaskCard.tsx` → "Submit for Review" button
-
-**Request**:
-```json
-{
-  "attachments": [
-    {
-      "id": "string",
-      "name": "string",
-      "type": "pdf" | "image" | "zip" | "other",
-      "size": 1024,
-      "url": "string",
-      "mimeType": "string"
-    }
-  ]
-}
-```
-
-**Response**:
-```json
-{
-  "task": {
-    ...
-    "status": "pending",
-    "submittedAt": "2024-01-15T10:30:00Z"
-  }
-}
-```
-
----
+**Response**: `{ "task": { ..., "status": "pending", "submittedAt": "ISO date" } }`
 
 ### POST `/tasks/:id/review`
 
-Review and approve/reject a submitted task (Admin only).
+**Request**: `{ "status": "approved | rejected", "feedback": "string" }`
 
-**Used In**:
-- `src/contexts/InternContext.tsx` → `reviewTask()` function
-- `src/pages/AdminTasks.tsx` → Approve/Reject buttons
+**Response**: `{ "task": { ..., "status": "approved", "reviewedAt": "ISO date" } }`
 
-**Request**:
-```json
-{
-  "status": "approved" | "rejected",
-  "feedback": "string"
-}
-```
-
-**Response**:
-```json
-{
-  "task": {
-    ...
-    "status": "approved" | "rejected",
-    "feedback": "Great work!",
-    "reviewedAt": "2024-01-16T14:00:00Z"
-  }
-}
-```
-
-**Important**: When a task is approved, the backend should automatically unlock the next sequential task by setting its status from "locked" to "in_progress".
-
----
+> **IMPORTANT**: When approving a task, the backend must unlock the next sequential task by changing its status from `locked` to `in_progress`.
 
 ### POST `/tasks/:id/attachments`
 
-Upload file attachment to a task.
+**Request**: `multipart/form-data` with field `attachment` (PDF, image, ZIP — max 10MB)
 
-**Used In**:
-- `src/components/TaskCard.tsx` → File upload zone
-
-**Request**: `multipart/form-data`
-- `attachment`: File (PDF, image, or ZIP)
-
-**Response**:
-```json
-{
-  "attachment": {
-    "id": "string",
-    "name": "report.pdf",
-    "type": "pdf",
-    "size": 102400,
-    "url": "https://storage.example.com/attachments/xyz.pdf",
-    "mimeType": "application/pdf"
-  }
-}
-```
+**Response**: `{ "attachment": { "id", "name", "type", "size", "url", "mimeType" } }`
 
 ---
 
-### DELETE `/tasks/:taskId/attachments/:attachmentId`
+## 5. Task Templates (Admin) — `routes/taskTemplates.js`
 
-Delete an attachment from a task.
+**Frontend Service**: `src/services/taskService.ts`
 
-**Used In**:
-- `src/components/TaskCard.tsx` → Remove attachment button
-
-**Response**: `204 No Content`
-
----
-
-### GET `/tasks/:taskId/attachments/:attachmentId/download`
-
-Download attachment file.
-
-**Used In**:
-- `src/pages/AdminTasks.tsx` → Download button in attachment viewer
-
-**Response**: File download
+| Method | Endpoint | Auth | Admin | Description | Frontend Usage |
+|--------|----------|------|-------|-------------|----------------|
+| GET | `/task-templates` | Yes | Yes | List all | `AdminTaskTemplates.tsx` |
+| GET | `/task-templates/:id` | Yes | Yes | Get one | `AdminTaskTemplates.tsx` |
+| POST | `/task-templates` | Yes | Yes | Create | `AdminTaskTemplates.tsx` |
+| PUT | `/task-templates/:id` | Yes | Yes | Update | `AdminTaskTemplates.tsx` |
+| DELETE | `/task-templates/:id` | Yes | Yes | Delete | `AdminTaskTemplates.tsx` |
+| POST | `/task-templates/:id/duplicate` | Yes | Yes | Duplicate | `AdminTaskTemplates.tsx` |
 
 ---
 
-## 5. Dashboard/Analytics Endpoints
+## 6. Dashboard & Reports — `routes/dashboard.js`, `routes/reports.js`
 
-**Endpoints File**: `src/utils/apiEndpoints.ts`
-
-### GET `/dashboard/intern-stats`
-
-Get statistics for intern dashboard.
-
-**Used In**: Not yet implemented (future feature)
-
-**Response**:
-```json
-{
-  "tasksCompleted": 3,
-  "tasksTotal": 5,
-  "progressPercentage": 60,
-  "currentTask": { ... }
-}
-```
+| Method | Endpoint | Auth | Admin | Description | Frontend Usage |
+|--------|----------|------|-------|-------------|----------------|
+| GET | `/dashboard/intern-stats` | Yes | No | Intern stats | `Dashboard.tsx` |
+| GET | `/dashboard/admin-stats` | Yes | Yes | Admin stats | `Dashboard.tsx` |
+| GET | `/dashboard/progress` | Yes | Yes | Overview | `AdminReports.tsx` |
+| GET | `/reports/summary` | Yes | Yes | Summary | `AdminReports.tsx` |
+| GET | `/reports/intern-progress` | Yes | Yes | Progress | `AdminReports.tsx` |
+| GET | `/reports/task-completion` | Yes | Yes | Completion | `AdminReports.tsx` |
+| GET | `/reports/domain-distribution` | Yes | Yes | Domains | `AdminReports.tsx` |
+| GET | `/reports/export/pdf` | Yes | Yes | Export PDF | `AdminReports.tsx` |
 
 ---
 
-### GET `/dashboard/admin-stats`
+## 7. Settings — `routes/settings.js`
 
-Get statistics for admin dashboard.
-
-**Used In**: Not yet implemented (future feature)
-
-**Response**:
-```json
-{
-  "totalInterns": 25,
-  "activeInterns": 20,
-  "pendingReviews": 5,
-  "completedToday": 3
-}
-```
+| Method | Endpoint | Auth | Description | Frontend Usage |
+|--------|----------|------|-------------|----------------|
+| GET | `/settings` | Yes | Get settings | `Settings.tsx` |
+| PUT | `/settings` | Yes | Update settings | `Settings.tsx` |
+| PUT | `/settings/password` | Yes | Change password | `Settings.tsx` |
+| PUT | `/settings/notifications` | Yes | Notification prefs | `Settings.tsx` |
 
 ---
 
-## File Structure
+## Frontend → Backend File Mapping
 
-```
-src/
-├── utils/
-│   └── apiEndpoints.ts      # All API endpoint constants
-├── services/
-│   ├── api.ts               # Base API service (fetch wrapper)
-│   ├── authService.ts       # Authentication API calls
-│   ├── internService.ts     # Intern management API calls
-│   ├── taskService.ts       # Task management API calls
-│   ├── mockData.ts          # Mock data for development
-│   └── index.ts             # Service exports
-├── contexts/
-│   ├── AuthContext.tsx      # Uses authService
-│   └── InternContext.tsx    # Uses internService, taskService
-└── pages/
-    ├── Login.tsx            # Uses authService.login()
-    ├── Register.tsx         # Uses authService.register(), updateProfile()
-    ├── Dashboard.tsx        # Uses taskService.getTasks()
-    ├── AdminInterns.tsx     # Uses internService.getInterns(), search(), export()
-    └── AdminTasks.tsx       # Uses taskService.reviewTask()
-```
+| Frontend File | Service Used | API Endpoints Called |
+|---------------|-------------|---------------------|
+| `src/pages/Login.tsx` | `authService` | `POST /auth/login` |
+| `src/pages/Register.tsx` | `authService` | `POST /auth/register`, `PUT /users/profile`, `PATCH /users/registration-step` |
+| `src/pages/Dashboard.tsx` | `taskService` | `GET /tasks`, `GET /dashboard/intern-stats` |
+| `src/pages/Settings.tsx` | `authService` | `GET /settings`, `PUT /settings`, `PUT /settings/password` |
+| `src/pages/AdminInterns.tsx` | `internService` | `GET /interns`, `GET /interns/search`, `GET /interns/export/csv` |
+| `src/pages/AdminInternDetails.tsx` | `internService` | `GET /interns/:id` |
+| `src/pages/AdminTasks.tsx` | `taskService` | `POST /tasks/:id/review`, `GET /tasks/:tid/attachments/:aid/download` |
+| `src/pages/AdminAddTask.tsx` | `taskService` | `POST /tasks`, `POST /tasks/assign`, `POST /tasks/bulk-assign` |
+| `src/pages/AdminTaskTemplates.tsx` | `taskService` | `GET /task-templates`, `POST /task-templates`, `PUT /task-templates/:id`, `DELETE /task-templates/:id` |
+| `src/pages/AdminReports.tsx` | `internService` | `GET /reports/summary`, `GET /reports/intern-progress` |
+| `src/components/Layout.tsx` | `authService` | `POST /auth/logout` |
+| `src/components/TaskCard.tsx` | `taskService` | `POST /tasks/:id/submit`, `POST /tasks/:id/attachments` |
+| `src/contexts/AuthContext.tsx` | `authService` | `POST /auth/login`, `POST /auth/register`, `GET /users/profile` |
+| `src/contexts/InternContext.tsx` | `internService`, `taskService` | `GET /interns`, `GET /tasks`, `POST /tasks/:id/review` |
 
 ---
 
 ## Authentication Flow
 
-1. User logs in via `/auth/login`
-2. JWT token is stored in localStorage
-3. Token is sent in `Authorization: Bearer <token>` header for all authenticated requests
-4. Token refresh can be implemented via `/auth/refresh-token` endpoint
+1. User logs in → `POST /auth/login` → receives JWT token
+2. Token stored in `localStorage` via `setAuthToken()`
+3. All subsequent requests include `Authorization: Bearer <token>` header
+4. On app load, `GET /users/profile` validates the token
+5. On logout, `POST /auth/logout` + `removeAuthToken()` clears the session
 
 ---
 
-## Quick Reference Table
+## Switching from Mock to Real API
 
-| Endpoint | Method | Service | Used In |
-|----------|--------|---------|---------|
-| `/auth/login` | POST | authService | Login.tsx, AuthContext |
-| `/auth/logout` | POST | authService | Layout.tsx, AuthContext |
-| `/auth/register` | POST | authService | Register.tsx, AuthContext |
-| `/users/profile` | GET | authService | AuthContext |
-| `/users/profile` | PUT | authService | Register.tsx, AuthContext |
-| `/users/registration-step` | PATCH | authService | Register.tsx, AuthContext |
-| `/interns` | GET | internService | AdminInterns.tsx, InternContext |
-| `/interns/:id` | GET | internService | AdminTasks.tsx, InternContext |
-| `/interns/search` | GET | internService | AdminInterns.tsx |
-| `/interns/export/csv` | GET | internService | AdminInterns.tsx |
-| `/interns/export/excel` | GET | internService | AdminInterns.tsx |
-| `/tasks` | GET | taskService | Dashboard.tsx, InternContext |
-| `/tasks/:id` | GET | taskService | Dashboard.tsx |
-| `/tasks/:id/submit` | POST | taskService | TaskCard.tsx, InternContext |
-| `/tasks/:id/review` | POST | taskService | AdminTasks.tsx, InternContext |
-| `/tasks/:id/attachments` | POST | taskService | TaskCard.tsx |
+1. Set `USE_MOCK_DATA = false` in `src/services/api.ts`
+2. Set `VITE_API_BASE_URL` in frontend `.env`
+3. Start your Express backend on the configured port
+4. Ensure MongoDB is running and seeded with an admin user:
+
+```javascript
+// Seed script (run once)
+const User = require('./models/User');
+const Profile = require('./models/Profile');
+
+async function seedAdmin() {
+  const admin = await User.create({
+    email: 'admin@prima.com',
+    password: 'admin123',
+    role: 'admin',
+    registrationStep: 'complete'
+  });
+  await Profile.create({ userId: admin._id, name: 'Admin', email: 'admin@prima.com' });
+  console.log('Admin user created');
+}
+```
 
 ---
 
-## Backend Requirements
+## Key Backend Logic
 
-### Required Features
+### Sequential Task Unlocking
 
-1. **JWT Authentication** with token refresh
-2. **Role-based access control** (intern vs admin)
-3. **File storage** for task attachments (S3, GCS, or local)
-4. **Sequential task unlocking logic** - when task N is approved, task N+1 status changes to "in_progress"
+When approving a task via `POST /tasks/:id/review`:
 
-### Suggested Database Schema
+```javascript
+// In taskController.reviewTask
+if (status === 'approved') {
+  const allTasks = await InternTask.find({ internId: task.internId }).sort('createdAt');
+  const currentIndex = allTasks.findIndex(t => t._id.equals(task._id));
+  if (currentIndex + 1 < allTasks.length) {
+    await InternTask.findByIdAndUpdate(allTasks[currentIndex + 1]._id, { status: 'in_progress' });
+  }
+}
+```
 
-```sql
--- Users table
-CREATE TABLE users (
-  id UUID PRIMARY KEY,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  role ENUM('intern', 'admin') NOT NULL,
-  registration_step VARCHAR(10),
-  created_at TIMESTAMP DEFAULT NOW()
-);
+### Task Assignment (Admin creates tasks for interns)
 
--- Profiles table
-CREATE TABLE profiles (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  name VARCHAR(255),
-  mobile VARCHAR(20),
-  dob DATE,
-  address TEXT,
-  skills TEXT[], -- or JSON
-  domain VARCHAR(255),
-  college_name VARCHAR(255),
-  degree VARCHAR(100),
-  branch VARCHAR(100),
-  year_of_passing VARCHAR(4)
-);
+When assigning from templates via `POST /tasks/assign`:
 
--- Tasks table (template)
-CREATE TABLE task_templates (
-  id UUID PRIMARY KEY,
-  title VARCHAR(255),
-  description TEXT,
-  order_index INTEGER
-);
-
--- Intern tasks (instance per intern)
-CREATE TABLE intern_tasks (
-  id UUID PRIMARY KEY,
-  intern_id UUID REFERENCES users(id),
-  task_template_id UUID REFERENCES task_templates(id),
-  status ENUM('locked', 'in_progress', 'pending', 'approved', 'rejected'),
-  feedback TEXT,
-  submitted_at TIMESTAMP,
-  reviewed_at TIMESTAMP
-);
-
--- Attachments table
-CREATE TABLE attachments (
-  id UUID PRIMARY KEY,
-  intern_task_id UUID REFERENCES intern_tasks(id),
-  name VARCHAR(255),
-  type VARCHAR(20),
-  size INTEGER,
-  url TEXT,
-  mime_type VARCHAR(100),
-  created_at TIMESTAMP DEFAULT NOW()
-);
+```javascript
+// In taskController.assignTask
+exports.assignTask = async (req, res) => {
+  const { templateId, internIds } = req.body;
+  const template = await TaskTemplate.findById(templateId);
+  
+  const tasks = await Promise.all(internIds.map((internId, index) =>
+    InternTask.create({
+      internId,
+      taskTemplateId: template._id,
+      title: template.title,
+      description: template.description,
+      status: index === 0 ? 'in_progress' : 'locked' // First task unlocked
+    })
+  ));
+  
+  res.status(201).json({ tasks });
+};
 ```
 
 ---
 
 ## Support
 
-For questions about API integration, refer to the service files in `src/services/` which contain detailed JSDoc comments for each API call.
+- **API Endpoint Constants**: `src/utils/apiEndpoints.ts`
+- **Service Layer**: `src/services/` (authService, internService, taskService)
+- **Mock Data**: `src/services/mockData.ts` (used when `USE_MOCK_DATA = true`)
