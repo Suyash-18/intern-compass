@@ -1,67 +1,71 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { Intern, Task, TaskStatus, TaskAttachment } from '@/types';
-import { mockInterns, mockTasks } from '@/services/mockData';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import type { Intern, Task, TaskAttachment } from '@/types';
+import { internService } from '@/services/internService';
+import { taskService } from '@/services/taskService';
 
 interface InternContextType {
   interns: Intern[];
   currentInternTasks: Task[];
+  isLoading: boolean;
   setCurrentInternTasks: (tasks: Task[]) => void;
-  submitTask: (taskId: string, attachments?: TaskAttachment[]) => void;
-  reviewTask: (internId: string, taskId: string, status: 'approved' | 'rejected', feedback: string) => void;
+  submitTask: (taskId: string, attachments?: TaskAttachment[]) => Promise<void>;
+  reviewTask: (internId: string, taskId: string, status: 'approved' | 'rejected', feedback: string) => Promise<void>;
   getInternById: (id: string) => Intern | undefined;
+  refreshInterns: () => Promise<void>;
+  refreshTasks: () => Promise<void>;
 }
 
 const InternContext = createContext<InternContextType | undefined>(undefined);
 
 export function InternProvider({ children }: { children: React.ReactNode }) {
-  const [interns, setInterns] = useState<Intern[]>(mockInterns);
-  const [currentInternTasks, setCurrentInternTasks] = useState<Task[]>(mockTasks);
+  const [interns, setInterns] = useState<Intern[]>([]);
+  const [currentInternTasks, setCurrentInternTasks] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const submitTask = useCallback((taskId: string, attachments?: TaskAttachment[]) => {
-    setCurrentInternTasks((prev) =>
-      prev.map((task) =>
-        task.id === taskId
-          ? { 
-              ...task, 
-              status: 'pending' as TaskStatus, 
-              submittedAt: new Date().toISOString(),
-              attachments: attachments || task.attachments,
-            }
-          : task
-      )
-    );
+  const refreshInterns = useCallback(async () => {
+    try {
+      const data = await internService.getInterns();
+      setInterns(data);
+    } catch {
+      console.error('Failed to fetch interns');
+    }
   }, []);
 
+  const refreshTasks = useCallback(async () => {
+    try {
+      const data = await taskService.getTasks();
+      setCurrentInternTasks(data);
+    } catch {
+      console.error('Failed to fetch tasks');
+    }
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      await Promise.all([refreshInterns(), refreshTasks()]);
+      setIsLoading(false);
+    };
+    load();
+  }, [refreshInterns, refreshTasks]);
+
+  const submitTask = useCallback(async (taskId: string, attachments?: TaskAttachment[]) => {
+    const result = await taskService.submitTask(taskId, attachments);
+    if (result) {
+      // Refresh tasks to get updated state
+      await refreshTasks();
+    }
+  }, [refreshTasks]);
+
   const reviewTask = useCallback(
-    (internId: string, taskId: string, status: 'approved' | 'rejected', feedback: string) => {
-      setInterns((prev) =>
-        prev.map((intern) => {
-          if (intern.id !== internId) return intern;
-
-          const taskIndex = intern.tasks.findIndex((t) => t.id === taskId);
-          if (taskIndex === -1) return intern;
-
-          const updatedTasks = [...intern.tasks];
-          updatedTasks[taskIndex] = {
-            ...updatedTasks[taskIndex],
-            status,
-            feedback,
-            reviewedAt: new Date().toISOString(),
-          };
-
-          // If approved, unlock next task
-          if (status === 'approved' && taskIndex + 1 < updatedTasks.length) {
-            updatedTasks[taskIndex + 1] = {
-              ...updatedTasks[taskIndex + 1],
-              status: 'in_progress',
-            };
-          }
-
-          return { ...intern, tasks: updatedTasks };
-        })
-      );
+    async (internId: string, taskId: string, status: 'approved' | 'rejected', feedback: string) => {
+      const result = await taskService.reviewTask(taskId, status, feedback);
+      if (result) {
+        // Refresh both interns and tasks to reflect changes
+        await Promise.all([refreshInterns(), refreshTasks()]);
+      }
     },
-    []
+    [refreshInterns, refreshTasks]
   );
 
   const getInternById = useCallback(
@@ -74,10 +78,13 @@ export function InternProvider({ children }: { children: React.ReactNode }) {
       value={{
         interns,
         currentInternTasks,
+        isLoading,
         setCurrentInternTasks,
         submitTask,
         reviewTask,
         getInternById,
+        refreshInterns,
+        refreshTasks,
       }}
     >
       {children}

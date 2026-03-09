@@ -11,7 +11,7 @@
 import { API_BASE, STATUS_CODES } from '@/utils/apiEndpoints';
 
 // Toggle this to switch between mock data and real API
-export const USE_MOCK_DATA = true;
+export const USE_MOCK_DATA = false;
 
 // Auth token storage key
 const AUTH_TOKEN_KEY = 'prima_auth_token';
