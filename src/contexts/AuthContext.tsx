@@ -1,9 +1,12 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User, InternProfile, RegistrationFormData } from '@/types';
+import { authService } from '@/services/authService';
+import { getAuthToken } from '@/services/api';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isLoading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
   register: (data: Partial<RegistrationFormData>) => Promise<boolean>;
@@ -13,83 +16,67 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo
-const mockUsers: { email: string; password: string; role: 'intern' | 'admin' }[] = [
-  { email: 'admin@prima.com', password: 'admin123', role: 'admin' },
-  { email: 'intern@prima.com', password: 'intern123', role: 'intern' },
-];
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Restore session on mount
+  useEffect(() => {
+    const restoreSession = async () => {
+      const token = getAuthToken();
+      if (token) {
+        const profile = await authService.getProfile();
+        if (profile) {
+          setUser(profile);
+        }
+      }
+      setIsLoading(false);
+    };
+    restoreSession();
+  }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const foundUser = mockUsers.find(
-      (u) => u.email === email && u.password === password
-    );
-
-    if (foundUser) {
-      setUser({
-        id: crypto.randomUUID(),
-        email: foundUser.email,
-        role: foundUser.role,
-        registrationStep: foundUser.role === 'admin' ? 'complete' : 1,
-      });
+    const result = await authService.login(email, password);
+    if (result.success && result.user) {
+      setUser(result.user);
       return true;
     }
     return false;
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await authService.logout();
     setUser(null);
   }, []);
 
   const register = useCallback(async (data: Partial<RegistrationFormData>): Promise<boolean> => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    if (!user) {
-      // Create new user on step 1
-      setUser({
-        id: crypto.randomUUID(),
-        email: data.email || '',
-        role: 'intern',
-        registrationStep: 2,
-        profile: {
-          name: data.name || '',
-          email: data.email || '',
-          mobile: data.mobile || '',
-          dob: '',
-          address: '',
-          skills: [],
-          domain: '',
-          collegeName: '',
-          degree: '',
-          branch: '',
-          yearOfPassing: '',
-        },
-      });
+    const result = await authService.register(data);
+    if (result.success && result.user) {
+      setUser(result.user);
+      return true;
     }
-    return true;
-  }, [user]);
+    return false;
+  }, []);
 
-  const updateRegistrationStep = useCallback((step: 1 | 2 | 3 | 'complete') => {
+  const updateRegistrationStep = useCallback(async (step: 1 | 2 | 3 | 'complete') => {
+    await authService.updateRegistrationStep(step);
     setUser((prev) => (prev ? { ...prev, registrationStep: step } : null));
   }, []);
 
-  const updateProfile = useCallback((profile: Partial<InternProfile>) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        profile: {
-          ...prev.profile,
-          ...profile,
-        } as InternProfile,
-      };
-    });
+  const updateProfile = useCallback(async (profile: Partial<InternProfile>) => {
+    const result = await authService.updateProfile(profile);
+    if (result.success && result.user) {
+      setUser(result.user);
+    } else {
+      // Optimistic update
+      setUser((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          profile: { ...prev.profile, ...profile } as InternProfile,
+        };
+      });
+    }
   }, []);
 
   return (
@@ -97,6 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         isAuthenticated: !!user,
+        isLoading,
         login,
         logout,
         register,

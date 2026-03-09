@@ -20,14 +20,23 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="text-center space-y-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: 'intern' | 'admin' }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
+  if (isLoading) return <LoadingScreen />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
 
-  // Check if registration is complete for interns
   if (user?.role === 'intern' && user.registrationStep !== 'complete') {
     return <Navigate to="/register" replace />;
   }
@@ -40,7 +49,9 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode;
 }
 
 function AuthRoute({ children }: { children: React.ReactNode }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) return <LoadingScreen />;
 
   if (isAuthenticated) {
     if (user?.role === 'intern' && user.registrationStep !== 'complete') {
@@ -56,57 +67,16 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
-      
-      {/* Auth Routes */}
       <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
       <Route path="/register" element={<Register />} />
-      
-      {/* Intern Routes */}
-      <Route path="/dashboard" element={
-        <ProtectedRoute requiredRole="intern">
-          <Dashboard />
-        </ProtectedRoute>
-      } />
-      
-      {/* Admin Routes */}
-      <Route path="/admin" element={
-        <ProtectedRoute requiredRole="admin">
-          <AdminInterns />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/interns/:id" element={
-        <ProtectedRoute requiredRole="admin">
-          <AdminInternDetails />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/tasks" element={
-        <ProtectedRoute requiredRole="admin">
-          <AdminTasks />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/tasks/new" element={
-        <ProtectedRoute requiredRole="admin">
-          <AdminAddTask />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/templates" element={
-        <ProtectedRoute requiredRole="admin">
-          <AdminTaskTemplates />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/reports" element={
-        <ProtectedRoute requiredRole="admin">
-          <AdminReports />
-        </ProtectedRoute>
-      } />
-      
-      {/* Common Routes */}
-      <Route path="/settings" element={
-        <ProtectedRoute>
-          <Settings />
-        </ProtectedRoute>
-      } />
-      
+      <Route path="/dashboard" element={<ProtectedRoute requiredRole="intern"><Dashboard /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminInterns /></ProtectedRoute>} />
+      <Route path="/admin/interns/:id" element={<ProtectedRoute requiredRole="admin"><AdminInternDetails /></ProtectedRoute>} />
+      <Route path="/admin/tasks" element={<ProtectedRoute requiredRole="admin"><AdminTasks /></ProtectedRoute>} />
+      <Route path="/admin/tasks/new" element={<ProtectedRoute requiredRole="admin"><AdminAddTask /></ProtectedRoute>} />
+      <Route path="/admin/templates" element={<ProtectedRoute requiredRole="admin"><AdminTaskTemplates /></ProtectedRoute>} />
+      <Route path="/admin/reports" element={<ProtectedRoute requiredRole="admin"><AdminReports /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
