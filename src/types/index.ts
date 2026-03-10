@@ -47,6 +47,9 @@ export interface Task {
   feedback?: string;
   submittedAt?: string;
   reviewedAt?: string;
+  lockType?: TaskLockType;
+  unlockAfterTaskId?: string;
+  unlockDate?: string;
   attachments?: TaskAttachment[];
 }
 
