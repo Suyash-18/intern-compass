@@ -1,12 +1,23 @@
 import { apiService, USE_MOCK_DATA } from './api';
 import { API_ENDPOINTS } from '@/utils/apiEndpoints';
 
+export interface TemplateAttachment {
+  _id: string;
+  name: string;
+  type: 'pdf' | 'image' | 'zip' | 'other';
+  size: number;
+  url: string;
+  mimeType: string;
+}
+
 export interface TaskTemplate {
   id: string;
   title: string;
   description: string;
   category: string;
   estimatedDays: number;
+  priority: string;
+  attachments: TemplateAttachment[];
   createdAt: string;
 }
 
@@ -29,20 +40,62 @@ export const templateService = {
     }
   },
 
-  async createTemplate(data: Omit<TaskTemplate, 'id' | 'createdAt'>): Promise<TaskTemplate | null> {
+  async createTemplate(data: {
+    title: string;
+    description: string;
+    category: string;
+    estimatedDays: number;
+    files?: File[];
+  }): Promise<TaskTemplate | null> {
     if (USE_MOCK_DATA) return null;
     try {
-      const res = await apiService.post<TemplateResponse>(API_ENDPOINTS.TASK_TEMPLATES.CREATE, data);
+      const formData = new FormData();
+      formData.append('title', data.title);
+      formData.append('description', data.description);
+      formData.append('category', data.category);
+      formData.append('estimatedDays', String(data.estimatedDays));
+      if (data.files) {
+        data.files.forEach((file) => formData.append('attachments', file));
+      }
+      const res = await apiService.uploadFormData<TemplateResponse>(
+        API_ENDPOINTS.TASK_TEMPLATES.CREATE,
+        formData
+      );
       return res.template;
     } catch {
       return null;
     }
   },
 
-  async updateTemplate(id: string, data: Partial<TaskTemplate>): Promise<TaskTemplate | null> {
+  async updateTemplate(
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      category?: string;
+      estimatedDays?: number;
+      files?: File[];
+      removeAttachmentIds?: string[];
+    }
+  ): Promise<TaskTemplate | null> {
     if (USE_MOCK_DATA) return null;
     try {
-      const res = await apiService.put<TemplateResponse>(API_ENDPOINTS.TASK_TEMPLATES.UPDATE(id), data);
+      const formData = new FormData();
+      if (data.title) formData.append('title', data.title);
+      if (data.description) formData.append('description', data.description);
+      if (data.category !== undefined) formData.append('category', data.category);
+      if (data.estimatedDays) formData.append('estimatedDays', String(data.estimatedDays));
+      if (data.removeAttachmentIds?.length) {
+        formData.append('removeAttachmentIds', JSON.stringify(data.removeAttachmentIds));
+      }
+      if (data.files) {
+        data.files.forEach((file) => formData.append('attachments', file));
+      }
+      const res = await apiService.uploadFormData<TemplateResponse>(
+        API_ENDPOINTS.TASK_TEMPLATES.UPDATE(id),
+        formData,
+        'PUT'
+      );
       return res.template;
     } catch {
       return null;
