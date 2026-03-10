@@ -29,6 +29,21 @@ const internTaskSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Lock configuration
+    lockType: {
+      type: String,
+      enum: ['open', 'sequential', 'after_task', 'until_date'],
+      default: 'sequential',
+    },
+    unlockAfterTaskId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'InternTask',
+      default: null,
+    },
+    unlockDate: {
+      type: Date,
+      default: null,
+    },
     feedback: { type: String, default: '' },
     submittedAt: { type: Date },
     reviewedAt: { type: Date },
