@@ -194,6 +194,29 @@ export const apiService = {
   },
 
   /**
+   * Upload FormData directly (for multipart with custom fields)
+   */
+  async uploadFormData<T>(
+    endpoint: string,
+    formData: FormData,
+    method: 'POST' | 'PUT' = 'POST'
+  ): Promise<T> {
+    const token = getAuthToken();
+    const headers: HeadersInit = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      method,
+      headers,
+      body: formData,
+    });
+
+    return parseResponse<T>(response);
+  },
+
+  /**
    * Download file
    */
   async downloadFile(endpoint: string, filename: string): Promise<void> {

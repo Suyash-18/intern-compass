@@ -8,8 +8,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, FileText, Edit2, Trash2, Copy, BookTemplate, LayoutTemplate } from 'lucide-react';
-import { templateService, type TaskTemplate } from '@/services/templateService';
+import { Plus, FileText, Edit2, Trash2, Copy, BookTemplate, LayoutTemplate, Paperclip, X, Download } from 'lucide-react';
+import { templateService, type TaskTemplate, type TemplateAttachment } from '@/services/templateService';
 
 export default function AdminTaskTemplates() {
   const { toast } = useToast();
@@ -18,6 +18,8 @@ export default function AdminTaskTemplates() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<TaskTemplate | null>(null);
   const [formData, setFormData] = useState({ title: '', description: '', category: '', estimatedDays: 1 });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [removeAttachmentIds, setRemoveAttachmentIds] = useState<string[]>([]);
 
   useEffect(() => {
     const load = async () => {
@@ -35,26 +37,41 @@ export default function AdminTaskTemplates() {
       return;
     }
     if (editingTemplate) {
-      const updated = await templateService.updateTemplate(editingTemplate.id, formData);
+      const updated = await templateService.updateTemplate(editingTemplate.id, {
+        ...formData,
+        files: selectedFiles.length > 0 ? selectedFiles : undefined,
+        removeAttachmentIds: removeAttachmentIds.length > 0 ? removeAttachmentIds : undefined,
+      });
       if (updated) {
         setTemplates(prev => prev.map(t => t.id === editingTemplate.id ? updated : t));
         toast({ title: 'Template Updated' });
       }
     } else {
-      const created = await templateService.createTemplate(formData);
+      const created = await templateService.createTemplate({
+        ...formData,
+        files: selectedFiles.length > 0 ? selectedFiles : undefined,
+      });
       if (created) {
         setTemplates(prev => [...prev, created]);
         toast({ title: 'Template Created' });
       }
     }
+    resetDialog();
+  };
+
+  const resetDialog = () => {
     setIsDialogOpen(false);
     setEditingTemplate(null);
     setFormData({ title: '', description: '', category: '', estimatedDays: 1 });
+    setSelectedFiles([]);
+    setRemoveAttachmentIds([]);
   };
 
   const handleEdit = (template: TaskTemplate) => {
     setEditingTemplate(template);
     setFormData({ title: template.title, description: template.description, category: template.category, estimatedDays: template.estimatedDays });
+    setSelectedFiles([]);
+    setRemoveAttachmentIds([]);
     setIsDialogOpen(true);
   };
 
@@ -77,7 +94,24 @@ export default function AdminTaskTemplates() {
   const openNewDialog = () => {
     setEditingTemplate(null);
     setFormData({ title: '', description: '', category: '', estimatedDays: 1 });
+    setSelectedFiles([]);
+    setRemoveAttachmentIds([]);
     setIsDialogOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setSelectedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+    e.target.value = '';
+  };
+
+  const removeNewFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const markAttachmentForRemoval = (attId: string) => {
+    setRemoveAttachmentIds(prev => [...prev, attId]);
   };
 
   const getCategoryColor = (category: string) => {
@@ -88,6 +122,12 @@ export default function AdminTaskTemplates() {
       'Project Work': 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
     };
     return colors[category] || 'bg-muted text-muted-foreground';
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   if (isLoading) {
@@ -122,11 +162,17 @@ export default function AdminTaskTemplates() {
                     <CardTitle className="text-base line-clamp-2">{template.title}</CardTitle>
                     <CardDescription className="mt-1">Est. {template.estimatedDays} day{template.estimatedDays > 1 ? 's' : ''}</CardDescription>
                   </div>
-                  <Badge className={getCategoryColor(template.category)} variant="secondary">{template.category}</Badge>
+                  {template.category && <Badge className={getCategoryColor(template.category)} variant="secondary">{template.category}</Badge>}
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground line-clamp-3">{template.description}</p>
+                {template.attachments?.length > 0 && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Paperclip className="h-3 w-3" />
+                    <span>{template.attachments.length} file{template.attachments.length > 1 ? 's' : ''}</span>
+                  </div>
+                )}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <Button size="sm" variant="ghost" onClick={() => handleEdit(template)}><Edit2 className="h-4 w-4" /></Button>
                   <Button size="sm" variant="ghost" onClick={() => handleDuplicate(template)}><Copy className="h-4 w-4" /></Button>
@@ -150,8 +196,8 @@ export default function AdminTaskTemplates() {
           </Card>
         )}
 
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+        <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetDialog(); else setIsDialogOpen(true); }}>
+          <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" />{editingTemplate ? 'Edit Template' : 'Create Template'}</DialogTitle>
               <DialogDescription>{editingTemplate ? 'Update the task template details' : 'Create a reusable task template'}</DialogDescription>
@@ -175,9 +221,59 @@ export default function AdminTaskTemplates() {
                   <Input id="template-days" type="number" min={1} value={formData.estimatedDays} onChange={(e) => setFormData(prev => ({ ...prev, estimatedDays: parseInt(e.target.value) || 1 }))} />
                 </div>
               </div>
+
+              {/* File attachments section */}
+              <div className="space-y-3">
+                <Label className="flex items-center gap-2"><Paperclip className="h-4 w-4" />Attachments</Label>
+                
+                {/* Existing attachments (edit mode) */}
+                {editingTemplate && editingTemplate.attachments?.filter(a => !removeAttachmentIds.includes(a._id)).map(att => (
+                  <div key={att._id} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="h-4 w-4 text-primary shrink-0" />
+                      <span className="truncate">{att.name}</span>
+                      <span className="text-muted-foreground shrink-0">({formatFileSize(att.size)})</span>
+                    </div>
+                    <Button type="button" size="sm" variant="ghost" className="text-destructive shrink-0" onClick={() => markAttachmentForRemoval(att._id)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                {/* New files to upload */}
+                {selectedFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-2 bg-accent/50 rounded-lg text-sm">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                      <span className="truncate">{file.name}</span>
+                      <span className="text-muted-foreground shrink-0">({formatFileSize(file.size)})</span>
+                    </div>
+                    <Button type="button" size="sm" variant="ghost" className="text-destructive shrink-0" onClick={() => removeNewFile(idx)}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+
+                <div>
+                  <label htmlFor="template-files" className="cursor-pointer">
+                    <div className="flex items-center gap-2 p-3 border-2 border-dashed border-muted-foreground/25 rounded-lg hover:border-primary/50 transition-colors text-sm text-muted-foreground">
+                      <Plus className="h-4 w-4" />
+                      <span>Add files (PDF, Images, ZIP)</span>
+                    </div>
+                  </label>
+                  <input
+                    id="template-files"
+                    type="file"
+                    multiple
+                    accept=".pdf,.png,.jpg,.jpeg,.gif,.zip"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                </div>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancel</Button>
+              <Button variant="outline" onClick={resetDialog}>Cancel</Button>
               <Button onClick={handleSaveTemplate}>{editingTemplate ? 'Save Changes' : 'Create Template'}</Button>
             </DialogFooter>
           </DialogContent>
