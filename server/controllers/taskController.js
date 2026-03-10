@@ -218,9 +218,25 @@ exports.reviewTask = async (req, res, next) => {
     task.reviewedAt = new Date();
     await task.save();
 
-    // If approved, unlock the next sequential task
+    // If approved, unlock dependent tasks
     if (status === 'approved') {
-      const allTasks = await InternTask.find({ internId: task.internId }).sort('orderIndex');
+      // 1. Unlock tasks that depend on this specific task (after_task)
+      const dependentTasks = await InternTask.find({
+        internId: task.internId,
+        lockType: 'after_task',
+        unlockAfterTaskId: task._id,
+        status: 'locked',
+      });
+      for (const depTask of dependentTasks) {
+        depTask.status = 'in_progress';
+        await depTask.save();
+      }
+
+      // 2. Unlock next sequential task
+      const allTasks = await InternTask.find({
+        internId: task.internId,
+        lockType: 'sequential',
+      }).sort('orderIndex');
       const currentIndex = allTasks.findIndex((t) => t._id.equals(task._id));
 
       if (currentIndex !== -1 && currentIndex + 1 < allTasks.length) {
