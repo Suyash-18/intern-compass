@@ -28,6 +28,7 @@ export interface InternProfile {
 }
 
 export type TaskStatus = 'locked' | 'in_progress' | 'pending' | 'approved' | 'rejected';
+export type TaskLockType = 'open' | 'sequential' | 'after_task' | 'until_date';
 
 export interface TaskAttachment {
   id: string;
