@@ -71,14 +71,31 @@ exports.getTaskById = async (req, res, next) => {
  */
 exports.createTask = async (req, res, next) => {
   try {
-    const { title, description, internId, orderIndex } = req.body;
+    const { title, description, internId, orderIndex, lockType, unlockAfterTaskId, unlockDate } = req.body;
+
+    const resolvedLockType = lockType || 'sequential';
+    const existingCount = await InternTask.countDocuments({ internId });
+    const idx = orderIndex != null ? orderIndex : existingCount;
+
+    // Determine initial status based on lock type
+    let initialStatus = 'locked';
+    if (resolvedLockType === 'open') {
+      initialStatus = 'in_progress';
+    } else if (resolvedLockType === 'sequential' && idx === 0) {
+      initialStatus = 'in_progress';
+    } else if (resolvedLockType === 'until_date' && unlockDate && new Date(unlockDate) <= new Date()) {
+      initialStatus = 'in_progress';
+    }
 
     const task = await InternTask.create({
       title,
       description,
       internId,
-      orderIndex: orderIndex || 0,
-      status: orderIndex === 0 ? 'in_progress' : 'locked',
+      orderIndex: idx,
+      lockType: resolvedLockType,
+      unlockAfterTaskId: resolvedLockType === 'after_task' ? unlockAfterTaskId : null,
+      unlockDate: resolvedLockType === 'until_date' ? unlockDate : null,
+      status: initialStatus,
     });
 
     res.status(201).json({ task });
