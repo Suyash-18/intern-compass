@@ -13,6 +13,15 @@ exports.getTasks = async (req, res, next) => {
   try {
     const tasks = await InternTask.find({ internId: req.user._id }).sort('orderIndex');
 
+    // Auto-unlock date-based tasks
+    const now = new Date();
+    for (const task of tasks) {
+      if (task.status === 'locked' && task.lockType === 'until_date' && task.unlockDate && new Date(task.unlockDate) <= now) {
+        task.status = 'in_progress';
+        await task.save();
+      }
+    }
+
     const tasksWithAttachments = await Promise.all(
       tasks.map(async (task) => {
         const attachments = await Attachment.find({ internTaskId: task._id });
@@ -24,6 +33,9 @@ exports.getTasks = async (req, res, next) => {
           feedback: task.feedback,
           submittedAt: task.submittedAt,
           reviewedAt: task.reviewedAt,
+          lockType: task.lockType,
+          unlockAfterTaskId: task.unlockAfterTaskId,
+          unlockDate: task.unlockDate,
           attachments,
         };
       })
