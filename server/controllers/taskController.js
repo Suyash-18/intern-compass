@@ -362,20 +362,29 @@ exports.downloadAttachment = async (req, res, next) => {
  */
 exports.assignTask = async (req, res, next) => {
   try {
-    const { templateId, internIds } = req.body;
+    const { templateId, internIds, lockType, unlockAfterTaskId, unlockDate } = req.body;
 
     const template = await TaskTemplate.findById(templateId);
     if (!template) {
       return res.status(404).json({ message: 'Task template not found.' });
     }
 
+    const resolvedLockType = lockType || 'sequential';
     const tasks = [];
     for (const internId of internIds) {
       const user = await User.findOne({ _id: internId, role: 'intern' });
       if (!user) continue;
 
-      // Count existing tasks to determine order
       const existingCount = await InternTask.countDocuments({ internId });
+
+      let initialStatus = 'locked';
+      if (resolvedLockType === 'open') {
+        initialStatus = 'in_progress';
+      } else if (resolvedLockType === 'sequential' && existingCount === 0) {
+        initialStatus = 'in_progress';
+      } else if (resolvedLockType === 'until_date' && unlockDate && new Date(unlockDate) <= new Date()) {
+        initialStatus = 'in_progress';
+      }
 
       const task = await InternTask.create({
         internId,
@@ -383,7 +392,10 @@ exports.assignTask = async (req, res, next) => {
         title: template.title,
         description: template.description,
         orderIndex: existingCount,
-        status: existingCount === 0 ? 'in_progress' : 'locked',
+        lockType: resolvedLockType,
+        unlockAfterTaskId: resolvedLockType === 'after_task' ? unlockAfterTaskId : null,
+        unlockDate: resolvedLockType === 'until_date' ? unlockDate : null,
+        status: initialStatus,
       });
       tasks.push(task);
     }
