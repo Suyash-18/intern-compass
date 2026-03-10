@@ -126,11 +126,16 @@ export default function AdminAddTask() {
           internIds,
         });
       } else {
-        // Create task directly
-        await apiService.post(API_ENDPOINTS.TASKS.CREATE, {
-          ...formData,
-          assignedTo: internIds,
-        });
+        // Create task directly for each intern
+        await Promise.all(
+          internIds.map(internId =>
+            apiService.post(API_ENDPOINTS.TASKS.CREATE, {
+              title: formData.title,
+              description: formData.description,
+              internId,
+            })
+          )
+        );
       }
 
       toast({
