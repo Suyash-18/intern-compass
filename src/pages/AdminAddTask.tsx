@@ -13,8 +13,9 @@ import { useInterns } from '@/contexts/InternContext';
 import { apiService } from '@/services/api';
 import { API_ENDPOINTS } from '@/utils/apiEndpoints';
 import { templateService, type TaskTemplate } from '@/services/templateService';
-import { ArrowLeft, Plus, Users, FileText, Calendar, Tag, LayoutTemplate, Paperclip } from 'lucide-react';
+import { ArrowLeft, Plus, Users, FileText, Calendar, Tag, LayoutTemplate, Paperclip, Lock, Unlock, Clock, Link } from 'lucide-react';
 import { z } from 'zod';
+import type { TaskLockType } from '@/types';
 
 const taskSchema = z.object({
   title: z.string().min(3, 'Title must be at least 3 characters').max(100),
@@ -43,6 +44,14 @@ export default function AdminAddTask() {
     category: '',
   });
 
+  // Lock configuration
+  const [lockType, setLockType] = useState<TaskLockType>('open');
+  const [unlockAfterTaskId, setUnlockAfterTaskId] = useState<string>('');
+  const [unlockDate, setUnlockDate] = useState<string>('');
+
+  // We need existing tasks for "after_task" option - fetch per selected intern
+  const [existingTasks, setExistingTasks] = useState<{ id: string; title: string }[]>([]);
+
   const [selectedInterns, setSelectedInterns] = useState<string[]>([]);
   const [assignToAll, setAssignToAll] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -59,6 +68,25 @@ export default function AdminAddTask() {
     };
     loadTemplates();
   }, []);
+
+  // Load existing tasks when a single intern is selected (for after_task dependency)
+  useEffect(() => {
+    const loadExistingTasks = async () => {
+      if (selectedInterns.length === 1 && lockType === 'after_task') {
+        try {
+          const intern = interns.find(i => i.id === selectedInterns[0]);
+          if (intern?.tasks) {
+            setExistingTasks(intern.tasks.map(t => ({ id: t.id, title: t.title })));
+          }
+        } catch {
+          setExistingTasks([]);
+        }
+      } else {
+        setExistingTasks([]);
+      }
+    };
+    loadExistingTasks();
+  }, [selectedInterns, lockType, interns]);
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -99,6 +127,14 @@ export default function AdminAddTask() {
         setErrors({ assignment: 'Please select at least one intern or assign to all' });
         return false;
       }
+      if (lockType === 'after_task' && !unlockAfterTaskId) {
+        setErrors({ lockConfig: 'Please select a task to unlock after' });
+        return false;
+      }
+      if (lockType === 'until_date' && !unlockDate) {
+        setErrors({ lockConfig: 'Please select an unlock date' });
+        return false;
+      }
       setErrors({});
       return true;
     } catch (error) {
@@ -119,20 +155,26 @@ export default function AdminAddTask() {
     try {
       const internIds = assignToAll ? interns.map(i => i.id) : selectedInterns;
 
+      const lockPayload = {
+        lockType,
+        ...(lockType === 'after_task' && { unlockAfterTaskId }),
+        ...(lockType === 'until_date' && { unlockDate }),
+      };
+
       if (selectedTemplateId && selectedTemplateId !== 'none') {
-        // Use bulk-assign with template
         await apiService.post(API_ENDPOINTS.TASKS.BULK_ASSIGN, {
           templateIds: [selectedTemplateId],
           internIds,
+          ...lockPayload,
         });
       } else {
-        // Create task directly for each intern
         await Promise.all(
           internIds.map(internId =>
             apiService.post(API_ENDPOINTS.TASKS.CREATE, {
               title: formData.title,
               description: formData.description,
               internId,
+              ...lockPayload,
             })
           )
         );
@@ -150,6 +192,13 @@ export default function AdminAddTask() {
   };
 
   const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+
+  const lockTypeOptions: { value: TaskLockType; label: string; description: string; icon: React.ReactNode }[] = [
+    { value: 'open', label: 'Open (Unlocked)', description: 'Task is immediately available to the intern', icon: <Unlock className="h-4 w-4" /> },
+    { value: 'sequential', label: 'Sequential', description: 'Unlocks after the previous task is approved', icon: <Lock className="h-4 w-4" /> },
+    { value: 'after_task', label: 'After Specific Task', description: 'Unlocks after a chosen task is completed', icon: <Link className="h-4 w-4" /> },
+    { value: 'until_date', label: 'Until Date', description: 'Locked until a specific date', icon: <Clock className="h-4 w-4" /> },
+  ];
 
   return (
     <Layout>
@@ -191,7 +240,6 @@ export default function AdminAddTask() {
                   </SelectContent>
                 </Select>
 
-                {/* Show template attachments preview */}
                 {selectedTemplate?.attachments?.length > 0 && (
                   <div className="mt-3 space-y-1">
                     <p className="text-xs text-muted-foreground font-medium">Template files (will be included with task):</p>
@@ -247,6 +295,77 @@ export default function AdminAddTask() {
                   <Label htmlFor="dueDate" className="flex items-center gap-2"><Calendar className="h-4 w-4" />Due Date (Optional)</Label>
                   <Input id="dueDate" type="date" value={formData.dueDate} onChange={(e) => handleInputChange('dueDate', e.target.value)} min={new Date().toISOString().split('T')[0]} />
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Lock Configuration */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5 text-primary" />Task Availability</CardTitle>
+                <CardDescription>Control when the intern can start working on this task</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {lockTypeOptions.map(opt => (
+                    <div
+                      key={opt.value}
+                      onClick={() => setLockType(opt.value)}
+                      className={`cursor-pointer rounded-lg border-2 p-3 transition-all ${
+                        lockType === opt.value
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-muted-foreground/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className={lockType === opt.value ? 'text-primary' : 'text-muted-foreground'}>{opt.icon}</span>
+                        <span className="font-medium text-sm">{opt.label}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">{opt.description}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Conditional fields */}
+                {lockType === 'after_task' && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label>Unlock after which task is approved?</Label>
+                    {selectedInterns.length !== 1 ? (
+                      <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                        Select exactly one intern to choose a specific task dependency. For multiple interns, use "Sequential" instead.
+                      </p>
+                    ) : existingTasks.length === 0 ? (
+                      <p className="text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                        This intern has no existing tasks. The task will be set to open.
+                      </p>
+                    ) : (
+                      <Select value={unlockAfterTaskId} onValueChange={setUnlockAfterTaskId}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a task..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {existingTasks.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                    {errors.lockConfig && <p className="text-sm text-destructive">{errors.lockConfig}</p>}
+                  </div>
+                )}
+
+                {lockType === 'until_date' && (
+                  <div className="space-y-2 pt-2 border-t">
+                    <Label className="flex items-center gap-2"><Clock className="h-4 w-4" />Unlock Date</Label>
+                    <Input
+                      type="datetime-local"
+                      value={unlockDate}
+                      onChange={(e) => setUnlockDate(e.target.value)}
+                      min={new Date().toISOString().slice(0, 16)}
+                    />
+                    <p className="text-xs text-muted-foreground">The task will automatically become available on this date.</p>
+                    {errors.lockConfig && <p className="text-sm text-destructive">{errors.lockConfig}</p>}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
