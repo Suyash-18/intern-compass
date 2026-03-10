@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,7 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useInterns } from '@/contexts/InternContext';
 import { apiService } from '@/services/api';
 import { API_ENDPOINTS } from '@/utils/apiEndpoints';
-import { ArrowLeft, Plus, Save, Users, FileText, Calendar, Tag } from 'lucide-react';
+import { templateService, type TaskTemplate } from '@/services/templateService';
+import { ArrowLeft, Plus, Users, FileText, Calendar, Tag, LayoutTemplate, Paperclip } from 'lucide-react';
 import { z } from 'zod';
 
 const taskSchema = z.object({
@@ -30,6 +31,10 @@ export default function AdminAddTask() {
   const { toast } = useToast();
   const { interns } = useInterns();
 
+  const [templates, setTemplates] = useState<TaskTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
+  const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
+
   const [formData, setFormData] = useState<TaskFormData>({
     title: '',
     description: '',
@@ -44,6 +49,34 @@ export default function AdminAddTask() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categories = ['Onboarding', 'Training', 'Development', 'Documentation', 'Review', 'Project Work', 'Assessment'];
+
+  useEffect(() => {
+    const loadTemplates = async () => {
+      setIsLoadingTemplates(true);
+      const data = await templateService.getTemplates();
+      setTemplates(data);
+      setIsLoadingTemplates(false);
+    };
+    loadTemplates();
+  }, []);
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    if (templateId === 'none') {
+      setFormData({ title: '', description: '', priority: 'medium', dueDate: '', category: '' });
+      return;
+    }
+    const template = templates.find(t => t.id === templateId);
+    if (template) {
+      setFormData({
+        title: template.title,
+        description: template.description,
+        priority: (template.priority as 'low' | 'medium' | 'high') || 'medium',
+        dueDate: '',
+        category: template.category || '',
+      });
+    }
+  };
 
   const handleInputChange = (field: keyof TaskFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -84,15 +117,25 @@ export default function AdminAddTask() {
 
     setIsSubmitting(true);
     try {
-      // Create the task via API
-      await apiService.post(API_ENDPOINTS.TASKS.CREATE, {
-        ...formData,
-        assignedTo: assignToAll ? interns.map(i => i.id) : selectedInterns,
-      });
+      const internIds = assignToAll ? interns.map(i => i.id) : selectedInterns;
+
+      if (selectedTemplateId && selectedTemplateId !== 'none') {
+        // Use bulk-assign with template
+        await apiService.post(API_ENDPOINTS.TASKS.BULK_ASSIGN, {
+          templateIds: [selectedTemplateId],
+          internIds,
+        });
+      } else {
+        // Create task directly
+        await apiService.post(API_ENDPOINTS.TASKS.CREATE, {
+          ...formData,
+          assignedTo: internIds,
+        });
+      }
 
       toast({
         title: 'Task Created',
-        description: `Task "${formData.title}" has been created and assigned to ${assignToAll ? 'all interns' : `${selectedInterns.length} intern(s)`}.`,
+        description: `Task "${formData.title}" has been assigned to ${assignToAll ? 'all interns' : `${selectedInterns.length} intern(s)`}.`,
       });
       navigate('/admin/tasks');
     } catch {
@@ -100,6 +143,8 @@ export default function AdminAddTask() {
     }
     setIsSubmitting(false);
   };
+
+  const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
 
   return (
     <Layout>
@@ -116,6 +161,47 @@ export default function AdminAddTask() {
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-6">
+            {/* Template Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><LayoutTemplate className="h-5 w-5 text-primary" />Use Template (Optional)</CardTitle>
+                <CardDescription>Pre-fill from an existing template or create from scratch</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select value={selectedTemplateId} onValueChange={handleTemplateSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingTemplates ? 'Loading templates...' : 'Select a template or create from scratch'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Create from scratch</SelectItem>
+                    {templates.map(t => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{t.title}</span>
+                          {t.category && <span className="text-xs text-muted-foreground">({t.category})</span>}
+                          {t.attachments?.length > 0 && <Paperclip className="h-3 w-3 text-muted-foreground" />}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Show template attachments preview */}
+                {selectedTemplate?.attachments?.length > 0 && (
+                  <div className="mt-3 space-y-1">
+                    <p className="text-xs text-muted-foreground font-medium">Template files (will be included with task):</p>
+                    {selectedTemplate.attachments.map(att => (
+                      <div key={att._id} className="flex items-center gap-2 text-xs p-1.5 bg-muted rounded">
+                        <Paperclip className="h-3 w-3 text-primary" />
+                        <span className="truncate">{att.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Task Details */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" />Task Details</CardTitle>
