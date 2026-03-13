@@ -10,7 +10,8 @@ A structured internal platform for onboarding and sequential task management for
 | **Backend** | Node.js, Express.js |
 | **Database** | MongoDB (Mongoose ODM) via MongoDB Atlas |
 | **Auth** | JWT (JSON Web Tokens) with bcrypt |
-| **File Upload** | Multer (local storage or S3) |
+| **File Storage** | Cloudinary (images, PDFs, documents, archives) |
+| **File Upload** | Multer (memory storage → Cloudinary) |
 
 ---
 
@@ -23,18 +24,21 @@ prima-interns/
 │   ├── package.json                 # Backend dependencies
 │   ├── .env.example                 # Backend env template
 │   ├── config/
-│   │   └── db.js                    # MongoDB connection
+│   │   ├── db.js                    # MongoDB connection
+│   │   └── cloudinary.js            # Cloudinary SDK config
 │   ├── middleware/
 │   │   ├── auth.js                  # JWT verification
 │   │   ├── admin.js                 # Admin role check
-│   │   ├── upload.js                # Multer config
+│   │   ├── upload.js                # Multer config (memory storage)
 │   │   └── errorHandler.js          # Global error handler
+│   ├── utils/
+│   │   └── cloudinaryUpload.js      # Cloudinary upload/delete helpers
 │   ├── models/
 │   │   ├── User.js                  # User schema (email, password, role)
 │   │   ├── Profile.js               # Intern profile (personal, college)
 │   │   ├── TaskTemplate.js          # Reusable task templates
 │   │   ├── InternTask.js            # Tasks assigned to interns
-│   │   └── Attachment.js            # File attachments
+│   │   └── Attachment.js            # File attachments (Cloudinary URLs)
 │   ├── controllers/
 │   │   ├── authController.js        # Login, register, logout
 │   │   ├── userController.js        # Profile CRUD
@@ -53,9 +57,8 @@ prima-interns/
 │   │   ├── dashboard.js
 │   │   ├── reports.js
 │   │   └── settings.js
-│   ├── seed/
-│   │   └── seedAdmin.js             # Seed admin & sample intern
-│   └── uploads/                     # Uploaded files
+│   └── seed/
+│       └── seedAdmin.js             # Seed admin & sample intern
 │
 ├── src/                             # ← Frontend (React + Vite)
 │   ├── components/
@@ -66,6 +69,7 @@ prima-interns/
 │   │   ├── authService.ts
 │   │   ├── internService.ts
 │   │   ├── taskService.ts
+│   │   ├── templateService.ts
 │   │   └── mockData.ts
 │   ├── utils/
 │   │   └── apiEndpoints.ts          # All API endpoint constants
@@ -79,18 +83,57 @@ prima-interns/
 
 ## Quick Start
 
-### 1. Backend Setup
+### 1. Cloudinary Setup (Required for File Storage)
+
+All uploaded files (PDFs, images, documents, archives) are stored on **Cloudinary** instead of the local filesystem.
+
+1. Go to [Cloudinary](https://cloudinary.com) and create a **free account**
+2. After login, go to your **Dashboard** → you'll see your credentials:
+   - **Cloud Name** (e.g. `dxxxxxxx`)
+   - **API Key** (e.g. `123456789012345`)
+   - **API Secret** (e.g. `abcDefGhiJklMnoPqrStuVwxYz`)
+3. Copy these values into `server/.env` (see step 2 below)
+
+> **Free tier** includes 25GB storage + 25GB bandwidth/month — more than enough for development and small production use.
+
+### 2. Backend Setup
 
 ```bash
 cd server
-cp .env.example .env
-# Edit .env → set your MONGODB_URI (MongoDB Atlas connection string)
-npm install
+npm install                # Installs all dependencies including cloudinary & streamifier
+cp .env.example .env       # If you haven't already
+```
+
+Edit `server/.env` and fill in your credentials:
+
+```env
+# MongoDB Atlas Connection
+MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/prima_interns
+
+# JWT Authentication
+JWT_SECRET=your_secret_key_here
+JWT_EXPIRES_IN=7d
+
+# Cloudinary (required — get from https://cloudinary.com/console)
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# File Uploads
+MAX_FILE_SIZE=10485760
+
+# CORS
+CORS_ORIGIN=http://localhost:8080
+```
+
+Then run:
+
+```bash
 npm run seed     # Creates admin + sample intern
 npm run dev      # Starts on http://localhost:3000
 ```
 
-### 2. Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 # From project root
@@ -100,12 +143,52 @@ npm install
 npm run dev      # Starts on http://localhost:8080
 ```
 
-### 3. Connect to Real API
+### 4. Connect to Real API
 
-In `src/services/api.ts`, change:
+In `src/services/api.ts`, ensure:
 ```typescript
 export const USE_MOCK_DATA = false;
 ```
+
+---
+
+## Cloudinary Integration Details
+
+### How It Works
+
+1. **Upload flow**: Browser → Multer (memory buffer) → Cloudinary API → returns `secure_url`
+2. **Storage**: Files are stored in Cloudinary under the `prima-interns/` folder
+3. **Download**: Attachment URLs point directly to Cloudinary CDN (fast global delivery)
+4. **Deletion**: When attachments/tasks are deleted, files are also removed from Cloudinary
+
+### File Organization in Cloudinary
+
+```
+prima-interns/
+├── templates/       # Task template attachments
+└── tasks/
+    └── {taskId}/    # Per-task intern submission attachments
+```
+
+### Supported File Types
+
+All file types are accepted (no file-type restriction). Common types:
+- **Documents**: PDF, DOCX, PPTX, XLSX, TXT
+- **Images**: PNG, JPG, JPEG, GIF, WEBP, SVG
+- **Archives**: ZIP, RAR, 7Z
+- **Other**: Any file up to the configured `MAX_FILE_SIZE` (default 10MB)
+
+### Key Files Changed
+
+| File | Purpose |
+|------|---------|
+| `server/config/cloudinary.js` | Cloudinary SDK configuration |
+| `server/utils/cloudinaryUpload.js` | `uploadToCloudinary()` and `deleteFromCloudinary()` helpers |
+| `server/middleware/upload.js` | Multer with memory storage (no disk writes) |
+| `server/models/Attachment.js` | Added `publicId` field for Cloudinary deletion |
+| `server/models/TaskTemplate.js` | Added `publicId` to template attachment sub-schema |
+| `server/controllers/taskController.js` | Uses Cloudinary for upload/delete/download |
+| `server/controllers/taskTemplateController.js` | Uses Cloudinary for template file management |
 
 ---
 
@@ -119,7 +202,9 @@ export const USE_MOCK_DATA = false;
 | `MONGODB_URI` | MongoDB Atlas connection string | `mongodb+srv://user:pass@cluster.mongodb.net/prima_interns` |
 | `JWT_SECRET` | Secret key for JWT signing | `your_secret_key_here` |
 | `JWT_EXPIRES_IN` | Token expiration | `7d` |
-| `UPLOAD_DIR` | File upload directory | `./uploads` |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name | `dxxxxxxx` |
+| `CLOUDINARY_API_KEY` | Cloudinary API key | `123456789012345` |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret | `abcDefGhi...` |
 | `MAX_FILE_SIZE` | Max upload size in bytes | `10485760` (10MB) |
 | `CORS_ORIGIN` | Frontend URL for CORS | `http://localhost:8080` |
 
@@ -246,6 +331,15 @@ When a task is **approved** via `POST /tasks/:id/review`, the backend automatica
 - **Single assign**: `POST /tasks/assign` — assigns one template to selected interns
 - **Bulk assign**: `POST /tasks/bulk-assign` — assigns multiple templates to multiple interns
 - First task for each intern is auto-set to `in_progress`
+
+### Task Lock Types
+
+| Lock Type | Behavior |
+|-----------|----------|
+| `open` | Task is immediately available |
+| `sequential` | Unlocks after the previous task is approved |
+| `after_task` | Unlocks after a specific task is approved |
+| `until_date` | Locked until a specific date/time |
 
 ### Authentication Flow
 
