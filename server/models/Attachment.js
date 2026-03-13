@@ -15,6 +15,7 @@ const attachmentSchema = new mongoose.Schema(
     },
     size: { type: Number, required: true },
     url: { type: String, required: true },
+    publicId: { type: String, default: '' }, // Cloudinary public_id for deletion
     mimeType: { type: String, required: true },
   },
   { timestamps: true }

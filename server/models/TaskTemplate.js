@@ -5,6 +5,7 @@ const templateAttachmentSchema = new mongoose.Schema({
   type: { type: String, enum: ['pdf', 'image', 'zip', 'other'], default: 'other' },
   size: { type: Number, required: true },
   url: { type: String, required: true },
+  publicId: { type: String, default: '' }, // Cloudinary public_id
   mimeType: { type: String, required: true },
 });
 

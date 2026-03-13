@@ -1,6 +1,6 @@
 const TaskTemplate = require('../models/TaskTemplate');
 const path = require('path');
-const fs = require('fs');
+const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload');
 
 /**
  * GET /api/v1/task-templates
@@ -8,7 +8,6 @@ const fs = require('fs');
 exports.getTemplates = async (req, res, next) => {
   try {
     const templates = await TaskTemplate.find().sort('orderIndex');
-    // Map _id to id for frontend compatibility
     const mapped = templates.map(t => {
       const obj = t.toObject();
       obj.id = obj._id;
@@ -37,7 +36,6 @@ exports.getTemplateById = async (req, res, next) => {
 
 /**
  * POST /api/v1/task-templates
- * Supports multipart/form-data with file uploads
  */
 exports.createTemplate = async (req, res, next) => {
   try {
@@ -47,25 +45,29 @@ exports.createTemplate = async (req, res, next) => {
     const attachments = [];
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
+        const result = await uploadToCloudinary(file.buffer, {
+          folder: 'prima-interns/templates',
+        });
+
         const ext = path.extname(file.originalname).toLowerCase();
         let fileType = 'other';
         if (ext === '.pdf') fileType = 'pdf';
-        else if (['.png', '.jpg', '.jpeg', '.gif'].includes(ext)) fileType = 'image';
+        else if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) fileType = 'image';
         else if (ext === '.zip') fileType = 'zip';
 
         attachments.push({
           name: file.originalname,
           type: fileType,
           size: file.size,
-          url: `/uploads/${file.filename}`,
+          url: result.secure_url,
+          publicId: result.public_id,
           mimeType: file.mimetype,
         });
       }
     }
 
     const template = await TaskTemplate.create({
-      title,
-      description,
+      title, description,
       category: category || '',
       estimatedDays: estimatedDays ? parseInt(estimatedDays) : 1,
       orderIndex: orderIndex ?? count,
@@ -83,7 +85,6 @@ exports.createTemplate = async (req, res, next) => {
 
 /**
  * PUT /api/v1/task-templates/:id
- * Supports multipart/form-data with file uploads
  */
 exports.updateTemplate = async (req, res, next) => {
   try {
@@ -98,13 +99,12 @@ exports.updateTemplate = async (req, res, next) => {
     if (estimatedDays) template.estimatedDays = parseInt(estimatedDays);
     if (priority) template.priority = priority;
 
-    // Remove specified attachments
+    // Remove specified attachments from Cloudinary
     if (removeAttachmentIds) {
       const idsToRemove = JSON.parse(removeAttachmentIds);
       for (const att of template.attachments) {
-        if (idsToRemove.includes(att._id.toString())) {
-          const filePath = path.join(__dirname, '..', att.url);
-          if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+        if (idsToRemove.includes(att._id.toString()) && att.publicId) {
+          await deleteFromCloudinary(att.publicId, att.type === 'image' ? 'image' : 'raw');
         }
       }
       template.attachments = template.attachments.filter(
@@ -112,20 +112,25 @@ exports.updateTemplate = async (req, res, next) => {
       );
     }
 
-    // Add new files
+    // Add new files via Cloudinary
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
+        const result = await uploadToCloudinary(file.buffer, {
+          folder: 'prima-interns/templates',
+        });
+
         const ext = path.extname(file.originalname).toLowerCase();
         let fileType = 'other';
         if (ext === '.pdf') fileType = 'pdf';
-        else if (['.png', '.jpg', '.jpeg', '.gif'].includes(ext)) fileType = 'image';
+        else if (['.png', '.jpg', '.jpeg', '.gif', '.webp'].includes(ext)) fileType = 'image';
         else if (ext === '.zip') fileType = 'zip';
 
         template.attachments.push({
           name: file.originalname,
           type: fileType,
           size: file.size,
-          url: `/uploads/${file.filename}`,
+          url: result.secure_url,
+          publicId: result.public_id,
           mimeType: file.mimetype,
         });
       }
@@ -148,10 +153,11 @@ exports.deleteTemplate = async (req, res, next) => {
     const template = await TaskTemplate.findById(req.params.id);
     if (!template) return res.status(404).json({ message: 'Template not found.' });
 
-    // Delete attachment files
+    // Delete attachment files from Cloudinary
     for (const att of template.attachments) {
-      const filePath = path.join(__dirname, '..', att.url);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+      if (att.publicId) {
+        await deleteFromCloudinary(att.publicId, att.type === 'image' ? 'image' : 'raw');
+      }
     }
 
     await TaskTemplate.deleteOne({ _id: template._id });
@@ -182,6 +188,7 @@ exports.duplicateTemplate = async (req, res, next) => {
         type: a.type,
         size: a.size,
         url: a.url,
+        publicId: a.publicId,
         mimeType: a.mimeType,
       })),
     });
