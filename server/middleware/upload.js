@@ -20,30 +20,9 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter - allow only specific types
-const fileFilter = (req, file, cb) => {
-  const allowedExtensions = ['.pdf', '.png', '.jpg', '.jpeg', '.gif', '.zip'];
-  const allowedMimeTypes = [
-    'application/pdf',
-    'image/png',
-    'image/jpeg',
-    'image/gif',
-    'application/zip',
-    'application/x-zip-compressed',
-  ];
-
-  const ext = path.extname(file.originalname).toLowerCase();
-  if (allowedExtensions.includes(ext) && allowedMimeTypes.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(new Error('File type not allowed. Accepted: PDF, PNG, JPG, GIF, ZIP'), false);
-  }
-};
-
-// Multer instance
+// Multer instance - accept all file types
 const upload = multer({
   storage,
-  fileFilter,
   limits: {
     fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB default
   },

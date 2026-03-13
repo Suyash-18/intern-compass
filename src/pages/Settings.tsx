@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,6 @@ import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { authService } from '@/services/authService';
 import { settingsService } from '@/services/settingsService';
 import { Settings as SettingsIcon, User, Bell, Shield, Palette, Save } from 'lucide-react';
 
@@ -35,6 +34,26 @@ export default function Settings() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+
+  useEffect(() => {
+    const stored = localStorage.getItem('prima_theme');
+    if (stored === 'dark') {
+      document.documentElement.classList.add('dark');
+      setIsDark(true);
+    }
+  }, []);
+
+  const handleToggleDarkMode = (checked: boolean) => {
+    setIsDark(checked);
+    if (checked) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('prima_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('prima_theme', 'light');
+    }
+  };
 
   const handleSaveProfile = async () => {
     setIsSaving(true);
@@ -174,7 +193,7 @@ export default function Settings() {
           <CardContent>
             <div className="flex items-center justify-between">
               <div className="space-y-0.5"><Label>Dark Mode</Label><p className="text-sm text-muted-foreground">Toggle dark mode theme</p></div>
-              <Switch />
+              <Switch checked={isDark} onCheckedChange={handleToggleDarkMode} />
             </div>
           </CardContent>
         </Card>

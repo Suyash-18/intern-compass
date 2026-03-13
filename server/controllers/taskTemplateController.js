@@ -8,7 +8,13 @@ const fs = require('fs');
 exports.getTemplates = async (req, res, next) => {
   try {
     const templates = await TaskTemplate.find().sort('orderIndex');
-    res.json({ templates });
+    // Map _id to id for frontend compatibility
+    const mapped = templates.map(t => {
+      const obj = t.toObject();
+      obj.id = obj._id;
+      return obj;
+    });
+    res.json({ templates: mapped });
   } catch (error) {
     next(error);
   }
@@ -21,7 +27,9 @@ exports.getTemplateById = async (req, res, next) => {
   try {
     const template = await TaskTemplate.findById(req.params.id);
     if (!template) return res.status(404).json({ message: 'Template not found.' });
-    res.json({ template });
+    const obj = template.toObject();
+    obj.id = obj._id;
+    res.json({ template: obj });
   } catch (error) {
     next(error);
   }
@@ -64,7 +72,10 @@ exports.createTemplate = async (req, res, next) => {
       priority: priority || 'medium',
       attachments,
     });
-    res.status(201).json({ template });
+
+    const obj = template.toObject();
+    obj.id = obj._id;
+    res.status(201).json({ template: obj });
   } catch (error) {
     next(error);
   }
@@ -121,7 +132,9 @@ exports.updateTemplate = async (req, res, next) => {
     }
 
     await template.save();
-    res.json({ template });
+    const obj = template.toObject();
+    obj.id = obj._id;
+    res.json({ template: obj });
   } catch (error) {
     next(error);
   }
@@ -172,7 +185,10 @@ exports.duplicateTemplate = async (req, res, next) => {
         mimeType: a.mimeType,
       })),
     });
-    res.status(201).json({ template: duplicate });
+
+    const obj = duplicate.toObject();
+    obj.id = obj._id;
+    res.status(201).json({ template: obj });
   } catch (error) {
     next(error);
   }

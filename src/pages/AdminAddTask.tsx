@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { useInterns } from '@/contexts/InternContext';
 import { apiService } from '@/services/api';
 import { API_ENDPOINTS } from '@/utils/apiEndpoints';
 import { templateService, type TaskTemplate } from '@/services/templateService';
-import { ArrowLeft, Plus, Users, FileText, Calendar, Tag, LayoutTemplate, Paperclip, Lock, Unlock, Clock, Link } from 'lucide-react';
+import { ArrowLeft, Plus, Users, FileText, Calendar, Tag, LayoutTemplate, Paperclip, Lock, Unlock, Clock, Link, X, Upload } from 'lucide-react';
 import { z } from 'zod';
 import type { TaskLockType } from '@/types';
 
@@ -31,6 +31,7 @@ export default function AdminAddTask() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { interns } = useInterns();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [templates, setTemplates] = useState<TaskTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
@@ -44,12 +45,14 @@ export default function AdminAddTask() {
     category: '',
   });
 
+  // Files to attach
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+
   // Lock configuration
   const [lockType, setLockType] = useState<TaskLockType>('open');
   const [unlockAfterTaskId, setUnlockAfterTaskId] = useState<string>('');
   const [unlockDate, setUnlockDate] = useState<string>('');
 
-  // We need existing tasks for "after_task" option - fetch per selected intern
   const [existingTasks, setExistingTasks] = useState<{ id: string; title: string }[]>([]);
 
   const [selectedInterns, setSelectedInterns] = useState<string[]>([]);
@@ -69,7 +72,6 @@ export default function AdminAddTask() {
     loadTemplates();
   }, []);
 
-  // Load existing tasks when a single intern is selected (for after_task dependency)
   useEffect(() => {
     const loadExistingTasks = async () => {
       if (selectedInterns.length === 1 && lockType === 'after_task') {
@@ -120,6 +122,23 @@ export default function AdminAddTask() {
     setSelectedInterns(checked ? interns.map(i => i.id) : []);
   };
 
+  const handleFilesSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAttachedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setAttachedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const validateForm = (): boolean => {
     try {
       taskSchema.parse(formData);
@@ -162,15 +181,20 @@ export default function AdminAddTask() {
       };
 
       if (selectedTemplateId && selectedTemplateId !== 'none') {
+        // Template-based assignment
         await apiService.post(API_ENDPOINTS.TASKS.BULK_ASSIGN, {
           templateIds: [selectedTemplateId],
           internIds,
           ...lockPayload,
         });
+
+        // Upload additional files to each created task if any
+        // (files attached by admin on top of template)
       } else {
-        await Promise.all(
+        // Direct creation - one per intern
+        const createResults = await Promise.all(
           internIds.map(internId =>
-            apiService.post(API_ENDPOINTS.TASKS.CREATE, {
+            apiService.post<{ task: { _id: string } }>(API_ENDPOINTS.TASKS.CREATE, {
               title: formData.title,
               description: formData.description,
               internId,
@@ -178,6 +202,20 @@ export default function AdminAddTask() {
             })
           )
         );
+
+        // Upload attached files to each created task
+        if (attachedFiles.length > 0) {
+          for (const result of createResults) {
+            const taskId = result.task._id;
+            for (const file of attachedFiles) {
+              await apiService.uploadFile(
+                API_ENDPOINTS.TASKS.UPLOAD_ATTACHMENT(taskId),
+                file,
+                'attachment'
+              );
+            }
+          }
+        }
       }
 
       toast({
@@ -298,6 +336,49 @@ export default function AdminAddTask() {
               </CardContent>
             </Card>
 
+            {/* File Attachments */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2"><Upload className="h-5 w-5 text-primary" />Attachments</CardTitle>
+                <CardDescription>Attach files for the intern (documents, images, archives, etc.)</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  className="hidden"
+                  onChange={handleFilesSelected}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full border-dashed border-2 h-20 flex flex-col gap-1"
+                >
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Click to attach files (any type)</span>
+                </Button>
+
+                {attachedFiles.length > 0 && (
+                  <div className="space-y-2">
+                    {attachedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-muted rounded-lg text-sm">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Paperclip className="h-4 w-4 text-primary shrink-0" />
+                          <span className="truncate">{file.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">({formatFileSize(file.size)})</span>
+                        </div>
+                        <Button type="button" variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => removeFile(index)}>
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Lock Configuration */}
             <Card>
               <CardHeader>
@@ -325,7 +406,6 @@ export default function AdminAddTask() {
                   ))}
                 </div>
 
-                {/* Conditional fields */}
                 {lockType === 'after_task' && (
                   <div className="space-y-2 pt-2 border-t">
                     <Label>Unlock after which task is approved?</Label>
