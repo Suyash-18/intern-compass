@@ -18,6 +18,7 @@ export default function AdminInternDetails() {
   const { getInternById } = useInterns();
   const [intern, setIntern] = useState<Intern | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     const load = async () => {
