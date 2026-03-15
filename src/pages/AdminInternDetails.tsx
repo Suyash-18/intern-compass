@@ -154,6 +154,13 @@ export default function AdminInternDetails() {
             </Card>
           </div>
         </div>
+
+        {/* Task Detail Modal */}
+        <TaskDetailModal
+          task={selectedTask}
+          open={!!selectedTask}
+          onOpenChange={(open) => !open && setSelectedTask(null)}
+        />
       </div>
     </Layout>
   );
