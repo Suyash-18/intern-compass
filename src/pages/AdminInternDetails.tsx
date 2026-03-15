@@ -134,7 +134,11 @@ export default function AdminInternDetails() {
               <CardContent>
                 <div className="space-y-3">
                   {intern.tasks.map((task, index) => (
-                    <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedTask(task)}
+                    >
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium text-muted-foreground w-6">#{index + 1}</span>
                         <div>
