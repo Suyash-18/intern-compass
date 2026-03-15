@@ -76,6 +76,11 @@ export default function Login() {
                 <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={isLoading}>
                   {isLoading ? 'Signing in...' : <><LogIn className="mr-2 h-5 w-5" />Sign In</>}
                 </Button>
+                <div className="text-right">
+                  <Button variant="link" className="px-0 text-sm text-muted-foreground" onClick={() => navigate('/forgot-password')}>
+                    Forgot Password?
+                  </Button>
+                </div>
               </form>
               <div className="mt-6 pt-6 border-t">
                 <p className="text-sm text-muted-foreground text-center mb-4">New intern? Start your registration</p>
