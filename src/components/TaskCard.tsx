@@ -244,6 +244,18 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
         </CardContent>
       </Card>
 
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={task}
+        open={showDetailModal}
+        onOpenChange={setShowDetailModal}
+        onSubmit={(taskId) => {
+          setShowDetailModal(false);
+          setShowSubmitDialog(true);
+        }}
+        showSubmitAction={canSubmit}
+      />
+
       {/* Submit Confirmation Dialog */}
       <Dialog open={showSubmitDialog} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-lg">
