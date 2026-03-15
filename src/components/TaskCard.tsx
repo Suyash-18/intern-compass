@@ -149,10 +149,11 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
     <>
       <Card
         className={cn(
-          'task-card animate-fade-in',
+          'task-card animate-fade-in cursor-pointer hover:shadow-md transition-shadow',
           isLocked && 'task-card-locked'
         )}
         style={{ animationDelay: `${index * 50}ms` }}
+        onClick={() => setShowDetailModal(true)}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">
