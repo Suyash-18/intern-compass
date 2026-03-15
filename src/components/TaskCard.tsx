@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { TaskDetailModal } from '@/components/TaskDetailModal';
 import { Lock, Send, CheckCircle, AlertCircle, Upload, FileText, Image, Archive, X, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -61,6 +62,7 @@ function formatFileSize(bytes: number): string {
 
 export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -147,10 +149,11 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
     <>
       <Card
         className={cn(
-          'task-card animate-fade-in',
+          'task-card animate-fade-in cursor-pointer hover:shadow-md transition-shadow',
           isLocked && 'task-card-locked'
         )}
         style={{ animationDelay: `${index * 50}ms` }}
+        onClick={() => setShowDetailModal(true)}
       >
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-4">
@@ -226,7 +229,7 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
 
           {/* Action Button */}
           {canSubmit && (
-            <Button onClick={() => setShowSubmitDialog(true)} className="w-full">
+            <Button onClick={(e) => { e.stopPropagation(); setShowSubmitDialog(true); }} className="w-full">
               <Send className="mr-2 h-4 w-4" />
               {task.status === 'rejected' ? 'Resubmit for Review' : 'Submit for Review'}
             </Button>
@@ -240,6 +243,18 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        task={task}
+        open={showDetailModal}
+        onOpenChange={setShowDetailModal}
+        onSubmit={(taskId) => {
+          setShowDetailModal(false);
+          setShowSubmitDialog(true);
+        }}
+        showSubmitAction={canSubmit}
+      />
 
       {/* Submit Confirmation Dialog */}
       <Dialog open={showSubmitDialog} onOpenChange={handleCloseDialog}>

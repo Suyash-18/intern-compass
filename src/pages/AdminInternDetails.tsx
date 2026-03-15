@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { TaskDetailModal } from '@/components/TaskDetailModal';
 import { useInterns } from '@/contexts/InternContext';
 import { internService } from '@/services/internService';
 import { ArrowLeft, User, Mail, Phone, MapPin, Calendar, GraduationCap, Code, Briefcase, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
-import type { Intern } from '@/types';
+import type { Intern, Task } from '@/types';
 
 export default function AdminInternDetails() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,7 @@ export default function AdminInternDetails() {
   const { getInternById } = useInterns();
   const [intern, setIntern] = useState<Intern | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -132,7 +134,11 @@ export default function AdminInternDetails() {
               <CardContent>
                 <div className="space-y-3">
                   {intern.tasks.map((task, index) => (
-                    <div key={task.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                    <div
+                      key={task.id}
+                      className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedTask(task)}
+                    >
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-medium text-muted-foreground w-6">#{index + 1}</span>
                         <div>
@@ -148,6 +154,13 @@ export default function AdminInternDetails() {
             </Card>
           </div>
         </div>
+
+        {/* Task Detail Modal */}
+        <TaskDetailModal
+          task={selectedTask}
+          open={!!selectedTask}
+          onOpenChange={(open) => !open && setSelectedTask(null)}
+        />
       </div>
     </Layout>
   );
