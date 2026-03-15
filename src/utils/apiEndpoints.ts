@@ -28,6 +28,7 @@ export const API_ENDPOINTS = {
     REGISTER: '/auth/register',
     REFRESH_TOKEN: '/auth/refresh-token',
     FORGOT_PASSWORD: '/auth/forgot-password',
+    VERIFY_OTP: '/auth/verify-otp',
     RESET_PASSWORD: '/auth/reset-password',
     VERIFY_EMAIL: '/auth/verify-email',
   },

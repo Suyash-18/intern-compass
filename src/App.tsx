@@ -69,6 +69,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
+      <Route path="/forgot-password" element={<AuthRoute><ForgotPassword /></AuthRoute>} />
       <Route path="/register" element={<Register />} />
       <Route path="/dashboard" element={<ProtectedRoute requiredRole="intern"><Dashboard /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminInterns /></ProtectedRoute>} />
