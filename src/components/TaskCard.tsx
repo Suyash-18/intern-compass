@@ -62,6 +62,7 @@ function formatFileSize(bytes: number): string {
 
 export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
