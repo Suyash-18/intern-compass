@@ -7,6 +7,7 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { InternProvider } from "@/contexts/InternContext";
 
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AdminInterns from "./pages/AdminInterns";
