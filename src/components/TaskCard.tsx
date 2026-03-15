@@ -12,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { TaskDetailModal } from '@/components/TaskDetailModal';
 import { Lock, Send, CheckCircle, AlertCircle, Upload, FileText, Image, Archive, X, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
