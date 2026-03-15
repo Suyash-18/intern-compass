@@ -6,10 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { TaskDetailModal } from '@/components/TaskDetailModal';
 import { useInterns } from '@/contexts/InternContext';
 import { internService } from '@/services/internService';
 import { ArrowLeft, User, Mail, Phone, MapPin, Calendar, GraduationCap, Code, Briefcase, CheckCircle, Clock, AlertCircle, FileText } from 'lucide-react';
-import type { Intern } from '@/types';
+import type { Intern, Task } from '@/types';
 
 export default function AdminInternDetails() {
   const { id } = useParams<{ id: string }>();
