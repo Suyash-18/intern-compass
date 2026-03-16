@@ -9,16 +9,32 @@ import { Separator } from '@/components/ui/separator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { settingsService } from '@/services/settingsService';
-import { Settings as SettingsIcon, User, Bell, Shield, Palette, Save } from 'lucide-react';
+import { Settings as SettingsIcon, User, Bell, Shield, Palette, Save, GraduationCap } from 'lucide-react';
 
 export default function Settings() {
   const { user, updateProfile } = useAuth();
   const { toast } = useToast();
 
+  const isIntern = user?.role === 'intern';
+
   const [profileData, setProfileData] = useState({
     name: user?.profile?.name || '',
     email: user?.email || '',
     mobile: user?.profile?.mobile || '',
+  });
+
+  const [personalData, setPersonalData] = useState({
+    dob: user?.profile?.dob || '',
+    address: user?.profile?.address || '',
+    skills: user?.profile?.skills?.join(', ') || '',
+    domain: user?.profile?.domain || '',
+  });
+
+  const [collegeData, setCollegeData] = useState({
+    collegeName: user?.profile?.collegeName || '',
+    degree: user?.profile?.degree || '',
+    branch: user?.profile?.branch || '',
+    yearOfPassing: user?.profile?.yearOfPassing || '',
   });
 
   const [notifications, setNotifications] = useState({
@@ -57,8 +73,14 @@ export default function Settings() {
 
   const handleSaveProfile = async () => {
     setIsSaving(true);
-    await updateProfile({ name: profileData.name, mobile: profileData.mobile });
-    toast({ title: 'Settings Saved', description: 'Your profile settings have been updated successfully.' });
+    await updateProfile({
+      name: profileData.name,
+      mobile: profileData.mobile,
+      ...personalData,
+      skills: personalData.skills.split(',').map(s => s.trim()).filter(Boolean),
+      ...collegeData,
+    });
+    toast({ title: 'Profile Updated', description: 'Your profile has been saved successfully.' });
     setIsSaving(false);
   };
 
@@ -100,6 +122,7 @@ export default function Settings() {
           <p className="text-muted-foreground">Manage your account settings and preferences</p>
         </div>
 
+        {/* Basic Profile */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" />Profile Information</CardTitle>
@@ -121,13 +144,76 @@ export default function Settings() {
               <Label htmlFor="mobile">Mobile Number</Label>
               <Input id="mobile" value={profileData.mobile} onChange={(e) => setProfileData(prev => ({ ...prev, mobile: e.target.value }))} />
             </div>
-            <div className="pt-2">
-              <Button onClick={handleSaveProfile} disabled={isSaving}>
-                <Save className="h-4 w-4 mr-2" />{isSaving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </div>
           </CardContent>
         </Card>
+
+        {/* Personal Details - Intern Only */}
+        {isIntern && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" />Personal Details</CardTitle>
+              <CardDescription>Your personal and skill details</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="dob">Date of Birth</Label>
+                  <Input id="dob" type="date" value={personalData.dob} onChange={(e) => setPersonalData(prev => ({ ...prev, dob: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="domain">Domain</Label>
+                  <Input id="domain" placeholder="e.g. Web Development" value={personalData.domain} onChange={(e) => setPersonalData(prev => ({ ...prev, domain: e.target.value }))} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input id="address" value={personalData.address} onChange={(e) => setPersonalData(prev => ({ ...prev, address: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="skills">Skills</Label>
+                <Input id="skills" placeholder="e.g. JavaScript, React, Node.js" value={personalData.skills} onChange={(e) => setPersonalData(prev => ({ ...prev, skills: e.target.value }))} />
+                <p className="text-xs text-muted-foreground">Separate skills with commas</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* College Details - Intern Only */}
+        {isIntern && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><GraduationCap className="h-5 w-5 text-primary" />College Details</CardTitle>
+              <CardDescription>Your educational background</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="collegeName">College Name</Label>
+                <Input id="collegeName" value={collegeData.collegeName} onChange={(e) => setCollegeData(prev => ({ ...prev, collegeName: e.target.value }))} />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="degree">Degree</Label>
+                  <Input id="degree" placeholder="e.g. B.Tech" value={collegeData.degree} onChange={(e) => setCollegeData(prev => ({ ...prev, degree: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="branch">Branch</Label>
+                  <Input id="branch" placeholder="e.g. Computer Science" value={collegeData.branch} onChange={(e) => setCollegeData(prev => ({ ...prev, branch: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="yearOfPassing">Year of Passing</Label>
+                  <Input id="yearOfPassing" placeholder="e.g. 2025" value={collegeData.yearOfPassing} onChange={(e) => setCollegeData(prev => ({ ...prev, yearOfPassing: e.target.value }))} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Save Profile Button */}
+        <div>
+          <Button onClick={handleSaveProfile} disabled={isSaving} size="lg">
+            <Save className="h-4 w-4 mr-2" />{isSaving ? 'Saving...' : 'Save All Profile Changes'}
+          </Button>
+        </div>
 
         <Card>
           <CardHeader>

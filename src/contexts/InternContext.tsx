@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import type { Intern, Task, TaskAttachment } from '@/types';
 import { internService } from '@/services/internService';
 import { taskService } from '@/services/taskService';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface InternContextType {
   interns: Intern[];
@@ -21,15 +22,19 @@ export function InternProvider({ children }: { children: React.ReactNode }) {
   const [interns, setInterns] = useState<Intern[]>([]);
   const [currentInternTasks, setCurrentInternTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+
+  const isAdmin = user?.role === 'admin';
 
   const refreshInterns = useCallback(async () => {
+    if (!isAdmin) return; // Only admins can fetch all interns
     try {
       const data = await internService.getInterns();
       setInterns(data);
     } catch {
       console.error('Failed to fetch interns');
     }
-  }, []);
+  }, [isAdmin]);
 
   const refreshTasks = useCallback(async () => {
     try {
@@ -41,18 +46,25 @@ export function InternProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
     const load = async () => {
       setIsLoading(true);
-      await Promise.all([refreshInterns(), refreshTasks()]);
+      if (isAdmin) {
+        await Promise.all([refreshInterns(), refreshTasks()]);
+      } else {
+        await refreshTasks();
+      }
       setIsLoading(false);
     };
     load();
-  }, [refreshInterns, refreshTasks]);
+  }, [user, isAdmin, refreshInterns, refreshTasks]);
 
   const submitTask = useCallback(async (taskId: string, attachments?: TaskAttachment[]) => {
     const result = await taskService.submitTask(taskId, attachments);
     if (result) {
-      // Refresh tasks to get updated state
       await refreshTasks();
     }
   }, [refreshTasks]);
@@ -61,7 +73,6 @@ export function InternProvider({ children }: { children: React.ReactNode }) {
     async (internId: string, taskId: string, status: 'approved' | 'rejected', feedback: string) => {
       const result = await taskService.reviewTask(taskId, status, feedback);
       if (result) {
-        // Refresh both interns and tasks to reflect changes
         await Promise.all([refreshInterns(), refreshTasks()]);
       }
     },
