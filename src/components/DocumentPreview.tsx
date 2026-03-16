@@ -122,9 +122,10 @@ export function DocumentPreview({ attachments, label = 'Attachments' }: Document
             )}
             {previewAttachment?.type === 'pdf' && (
               <iframe
-                src={previewAttachment.url}
+                src={`https://docs.google.com/gview?url=${encodeURIComponent(previewAttachment.url)}&embedded=true`}
                 title={previewAttachment.name}
                 className="w-full h-[70vh] rounded-lg border"
+                sandbox="allow-scripts allow-same-origin"
               />
             )}
           </div>

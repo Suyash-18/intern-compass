@@ -7,11 +7,14 @@ require('dotenv').config();
 
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
+const { autoSeed } = require('./seed/seedAdmin');
 
 const app = express();
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB then auto-seed
+connectDB().then(() => {
+  autoSeed();
+});
 
 // Middleware
 app.use(helmet());
