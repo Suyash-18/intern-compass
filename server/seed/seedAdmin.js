@@ -1,26 +1,22 @@
 /**
  * Seed Script - Creates initial admin user
  *
- * Usage: cd server && node seed/seedAdmin.js
+ * Can be run standalone: cd server && node seed/seedAdmin.js
+ * Also auto-runs on server start (skips if data exists)
  *
  * Make sure MONGODB_URI is set in .env before running
  */
 
-require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
-const mongoose = require('mongoose');
 const User = require('../models/User');
 const Profile = require('../models/Profile');
 
-async function seed() {
+async function autoSeed() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ Connected to MongoDB');
-
-    // Check if admin exists
+    // Check if admin exists - skip if already seeded
     const existingAdmin = await User.findOne({ email: 'admin@prima.com' });
     if (existingAdmin) {
-      console.log('⚠️  Admin user already exists. Skipping.');
-      process.exit(0);
+      console.log('✅ Seed: Admin already exists, skipping.');
+      return;
     }
 
     // Create admin user
@@ -37,9 +33,7 @@ async function seed() {
       email: 'admin@prima.com',
     });
 
-    console.log('✅ Admin user created:');
-    console.log('   Email: admin@prima.com');
-    console.log('   Password: admin123');
+    console.log('✅ Seed: Admin user created (admin@prima.com / admin123)');
 
     // Create a sample intern
     const intern = await User.create({
@@ -62,15 +56,27 @@ async function seed() {
       skills: ['JavaScript', 'React', 'Node.js'],
     });
 
-    console.log('✅ Sample intern created:');
-    console.log('   Email: intern@prima.com');
-    console.log('   Password: intern123');
-
-    process.exit(0);
+    console.log('✅ Seed: Sample intern created (intern@prima.com / intern123)');
   } catch (error) {
-    console.error('❌ Seed error:', error.message);
-    process.exit(1);
+    console.error('⚠️  Seed error (non-fatal):', error.message);
   }
 }
 
-seed();
+// Standalone execution
+if (require.main === module) {
+  require('dotenv').config({ path: require('path').join(__dirname, '..', '.env') });
+  const mongoose = require('mongoose');
+
+  mongoose.connect(process.env.MONGODB_URI || require('../config/db').getURI?.() || 'mongodb://localhost:27017/Prima_Intern')
+    .then(() => {
+      console.log('✅ Connected to MongoDB');
+      return autoSeed();
+    })
+    .then(() => process.exit(0))
+    .catch((err) => {
+      console.error('❌ Error:', err.message);
+      process.exit(1);
+    });
+}
+
+module.exports = { autoSeed };
