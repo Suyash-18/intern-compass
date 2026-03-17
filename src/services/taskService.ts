@@ -222,7 +222,6 @@ export const taskService = {
       filename
     );
   },
-};
 
   /**
    * Update task (Admin)

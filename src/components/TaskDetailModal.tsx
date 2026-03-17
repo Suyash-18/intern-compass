@@ -90,8 +90,8 @@ export function TaskDetailModal({ task, open, onOpenChange, onSubmit, showSubmit
             </div>
           )}
 
-          {/* Attachments */}
-          {task.attachments && task.attachments.length > 0 && (
+          {/* Attachments - visible for all non-locked tasks */}
+          {!isLocked && task.attachments && task.attachments.length > 0 && (
             <DocumentPreview attachments={task.attachments} label="Submitted Files" />
           )}
 
