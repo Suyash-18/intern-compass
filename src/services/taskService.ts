@@ -224,4 +224,27 @@ export const taskService = {
   },
 };
 
+  /**
+   * Update task (Admin)
+   * PUT /tasks/:id
+   */
+  async updateTask(taskId: string, updates: Record<string, unknown>): Promise<Task | null> {
+    if (USE_MOCK_DATA) {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      return null;
+    }
+
+    try {
+      const response = await apiService.put<TaskResponse>(
+        API_ENDPOINTS.TASKS.UPDATE(taskId),
+        updates
+      );
+      return response.task;
+    } catch {
+      console.error('Failed to update task');
+      return null;
+    }
+  },
+};
+
 export default taskService;

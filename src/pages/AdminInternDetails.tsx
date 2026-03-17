@@ -157,11 +157,19 @@ export default function AdminInternDetails() {
           </div>
         </div>
 
-        {/* Task Detail Modal */}
-        <TaskDetailModal
+        {/* Admin Task Detail Modal */}
+        <AdminTaskDetailModal
           task={selectedTask}
           open={!!selectedTask}
           onOpenChange={(open) => !open && setSelectedTask(null)}
+          onUpdateTask={async (taskId, updates) => {
+            await taskService.updateTask(taskId, updates);
+            // Refresh intern data
+            if (id) {
+              const fetched = await internService.getInternById(id);
+              if (fetched) setIntern(fetched);
+            }
+          }}
         />
       </div>
     </Layout>
