@@ -182,8 +182,8 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
             {task.description}
           </CardDescription>
 
-          {/* Existing Attachments */}
-          {task.attachments && task.attachments.length > 0 && (
+          {/* Existing Attachments - visible for all non-locked tasks */}
+          {!isLocked && task.attachments && task.attachments.length > 0 && (
             <div className="mb-4">
               <p className="text-xs font-medium text-muted-foreground mb-2">Submitted Files</p>
               <div className="flex flex-wrap gap-2">
