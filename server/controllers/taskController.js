@@ -165,6 +165,9 @@ exports.submitTask = async (req, res, next) => {
     task.status = 'pending';
     task.submittedAt = new Date();
     task.feedback = '';
+    if (req.body.submissionNote !== undefined) {
+      task.submissionNote = req.body.submissionNote;
+    }
     await task.save();
 
     const attachments = await Attachment.find({ internTaskId: task._id });
