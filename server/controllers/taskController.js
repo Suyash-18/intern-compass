@@ -416,6 +416,7 @@ exports.bulkAssign = async (req, res, next) => {
               url: att.url,
               publicId: att.publicId || '',
               mimeType: att.mimeType,
+              source: 'template',
             });
           }
         }
