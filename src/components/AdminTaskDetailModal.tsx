@@ -143,9 +143,27 @@ export function AdminTaskDetailModal({ task, open, onOpenChange, onUpdateTask }:
             </div>
           )}
 
-          {/* Attachments */}
-          {task.attachments && task.attachments.length > 0 && (
-            <DocumentPreview attachments={task.attachments} label="Submitted Files" />
+          {/* Submission Details */}
+          {(task.status === 'pending' || task.status === 'approved' || task.status === 'rejected') && (
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-muted-foreground">Submission Details</h4>
+              {task.submissionNote && (
+                <div className="p-3 rounded-lg bg-muted border text-sm">
+                  <p className="font-medium text-xs text-muted-foreground mb-1">Intern's Note</p>
+                  <p className="whitespace-pre-wrap">{task.submissionNote}</p>
+                </div>
+              )}
+              {task.attachments && task.attachments.length > 0 ? (
+                <DocumentPreview attachments={task.attachments} label="Submitted Files" />
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No files submitted</p>
+              )}
+            </div>
+          )}
+
+          {/* Attachments for non-submission states */}
+          {task.status !== 'pending' && task.status !== 'approved' && task.status !== 'rejected' && task.attachments && task.attachments.length > 0 && (
+            <DocumentPreview attachments={task.attachments} label="Task Files" />
           )}
 
           {/* Admin Controls */}
