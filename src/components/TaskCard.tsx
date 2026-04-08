@@ -185,12 +185,12 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
             {task.description}
           </CardDescription>
 
-          {/* Existing Attachments - visible for all non-locked tasks */}
-          {!isLocked && task.attachments && task.attachments.length > 0 && (
+          {/* Task Attachments (from template/admin) */}
+          {!isLocked && task.taskAttachments && task.taskAttachments.length > 0 && (
             <div className="mb-4">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Submitted Files</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">Task Files</p>
               <div className="flex flex-wrap gap-2">
-                {task.attachments.map((attachment) => {
+                {task.taskAttachments.map((attachment) => {
                   const Icon = getFileIcon(attachment.type);
                   return (
                     <div
@@ -198,6 +198,27 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
                       className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-xs"
                     >
                       <Icon className="h-3.5 w-3.5" />
+                      <span className="max-w-[150px] truncate">{attachment.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Submission Attachments (from intern) */}
+          {!isLocked && task.submissionAttachments && task.submissionAttachments.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-medium text-primary mb-2">Submitted Work</p>
+              <div className="flex flex-wrap gap-2">
+                {task.submissionAttachments.map((attachment) => {
+                  const Icon = getFileIcon(attachment.type);
+                  return (
+                    <div
+                      key={attachment.id}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-primary/10 rounded-lg text-xs"
+                    >
+                      <Icon className="h-3.5 w-3.5 text-primary" />
                       <span className="max-w-[150px] truncate">{attachment.name}</span>
                     </div>
                   );
