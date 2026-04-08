@@ -20,7 +20,7 @@ import { toast } from '@/hooks/use-toast';
 interface TaskCardProps {
   task: Task;
   index: number;
-  onSubmit?: (taskId: string, attachments: TaskAttachment[]) => void;
+  onSubmit?: (taskId: string, attachments: TaskAttachment[], submissionNote: string) => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
