@@ -28,8 +28,10 @@ exports.getTasks = async (req, res, next) => {
           id: task._id,
           title: task.title,
           description: task.description,
+          category: task.category,
           status: task.status,
           feedback: task.feedback,
+          submissionNote: task.submissionNote,
           submittedAt: task.submittedAt,
           reviewedAt: task.reviewedAt,
           lockType: task.lockType,
@@ -165,6 +167,9 @@ exports.submitTask = async (req, res, next) => {
     task.status = 'pending';
     task.submittedAt = new Date();
     task.feedback = '';
+    if (req.body.submissionNote !== undefined) {
+      task.submissionNote = req.body.submissionNote;
+    }
     await task.save();
 
     const attachments = await Attachment.find({ internTaskId: task._id });
@@ -172,6 +177,7 @@ exports.submitTask = async (req, res, next) => {
       task: {
         id: task._id, title: task.title, description: task.description,
         status: task.status, feedback: task.feedback,
+        submissionNote: task.submissionNote,
         submittedAt: task.submittedAt, reviewedAt: task.reviewedAt, attachments,
       },
     });
@@ -347,11 +353,28 @@ exports.assignTask = async (req, res, next) => {
       const task = await InternTask.create({
         internId, taskTemplateId: template._id,
         title: template.title, description: template.description,
+        category: template.category || '',
         orderIndex: existingCount, lockType: resolvedLockType,
         unlockAfterTaskId: resolvedLockType === 'after_task' ? unlockAfterTaskId : null,
         unlockDate: resolvedLockType === 'until_date' ? unlockDate : null,
         status: initialStatus,
       });
+
+      // Copy template attachments to the new task
+      if (template.attachments && template.attachments.length > 0) {
+        for (const att of template.attachments) {
+          await Attachment.create({
+            internTaskId: task._id,
+            name: att.name,
+            type: att.type,
+            size: att.size,
+            url: att.url,
+            publicId: att.publicId || '',
+            mimeType: att.mimeType,
+          });
+        }
+      }
+
       tasks.push(task);
     }
 
@@ -391,11 +414,28 @@ exports.bulkAssign = async (req, res, next) => {
         const task = await InternTask.create({
           internId, taskTemplateId: template._id,
           title: template.title, description: template.description,
+          category: template.category || '',
           orderIndex, lockType: resolvedLockType,
           unlockAfterTaskId: null,
           unlockDate: resolvedLockType === 'until_date' ? unlockDate : null,
           status: initialStatus,
         });
+
+        // Copy template attachments to the new task
+        if (template.attachments && template.attachments.length > 0) {
+          for (const att of template.attachments) {
+            await Attachment.create({
+              internTaskId: task._id,
+              name: att.name,
+              type: att.type,
+              size: att.size,
+              url: att.url,
+              publicId: att.publicId || '',
+              mimeType: att.mimeType,
+            });
+          }
+        }
+
         allTasks.push(task);
       }
     }

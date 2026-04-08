@@ -8,8 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, FileText, Edit2, Trash2, Copy, BookTemplate, LayoutTemplate, Paperclip, X, Download } from 'lucide-react';
 import { templateService, type TaskTemplate, type TemplateAttachment } from '@/services/templateService';
+
+const CATEGORIES = ['Onboarding', 'Training', 'Development', 'Documentation', 'Review', 'Project Work', 'Assessment'];
 
 export default function AdminTaskTemplates() {
   const { toast } = useToast();
@@ -214,7 +217,12 @@ export default function AdminTaskTemplates() {
               <div className="grid gap-4 grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="template-category">Category</Label>
-                  <Input id="template-category" placeholder="e.g., Training" value={formData.category} onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))} />
+                  <Select value={formData.category} onValueChange={(v) => setFormData(prev => ({ ...prev, category: v }))}>
+                    <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="template-days">Est. Days</Label>

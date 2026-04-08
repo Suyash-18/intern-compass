@@ -9,7 +9,7 @@ interface InternContextType {
   currentInternTasks: Task[];
   isLoading: boolean;
   setCurrentInternTasks: (tasks: Task[]) => void;
-  submitTask: (taskId: string, attachments?: TaskAttachment[]) => Promise<void>;
+  submitTask: (taskId: string, attachments?: TaskAttachment[], submissionNote?: string) => Promise<void>;
   reviewTask: (internId: string, taskId: string, status: 'approved' | 'rejected', feedback: string) => Promise<void>;
   getInternById: (id: string) => Intern | undefined;
   refreshInterns: () => Promise<void>;
@@ -62,8 +62,8 @@ export function InternProvider({ children }: { children: React.ReactNode }) {
     load();
   }, [user, isAdmin, refreshInterns, refreshTasks]);
 
-  const submitTask = useCallback(async (taskId: string, attachments?: TaskAttachment[]) => {
-    const result = await taskService.submitTask(taskId, attachments);
+  const submitTask = useCallback(async (taskId: string, attachments?: TaskAttachment[], submissionNote?: string) => {
+    const result = await taskService.submitTask(taskId, attachments, submissionNote);
     if (result) {
       await refreshTasks();
     }

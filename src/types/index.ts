@@ -43,8 +43,10 @@ export interface Task {
   id: string;
   title: string;
   description: string;
+  category?: string;
   status: TaskStatus;
   feedback?: string;
+  submissionNote?: string;
   submittedAt?: string;
   reviewedAt?: string;
   lockType?: TaskLockType;

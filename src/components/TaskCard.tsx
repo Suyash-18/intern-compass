@@ -4,6 +4,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,7 @@ import { toast } from '@/hooks/use-toast';
 interface TaskCardProps {
   task: Task;
   index: number;
-  onSubmit?: (taskId: string, attachments: TaskAttachment[]) => void;
+  onSubmit?: (taskId: string, attachments: TaskAttachment[], submissionNote: string) => void;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -64,6 +65,7 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [attachments, setAttachments] = useState<TaskAttachment[]>([]);
+  const [submissionNote, setSubmissionNote] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -133,16 +135,17 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
   };
 
   const handleSubmit = () => {
-    onSubmit?.(task.id, attachments);
+    onSubmit?.(task.id, attachments, submissionNote);
     setShowSubmitDialog(false);
     setAttachments([]);
+    setSubmissionNote('');
   };
 
   const handleCloseDialog = () => {
     setShowSubmitDialog(false);
-    // Clean up object URLs
     attachments.forEach((a) => URL.revokeObjectURL(a.url));
     setAttachments([]);
+    setSubmissionNote('');
   };
 
   return (
@@ -267,6 +270,17 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Submission Note */}
+            <div>
+              <Label className="mb-2 block">Description / Notes</Label>
+              <Textarea
+                placeholder="Describe what you've done, any notes for the reviewer..."
+                value={submissionNote}
+                onChange={(e) => setSubmissionNote(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+
             {/* Upload Area */}
             <div>
               <Label className="mb-2 block">Attachments</Label>

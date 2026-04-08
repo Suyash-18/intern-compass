@@ -18,10 +18,15 @@ const buildInternObject = async (user) => {
         id: task._id,
         title: task.title,
         description: task.description,
+        category: task.category,
         status: task.status,
         feedback: task.feedback,
+        submissionNote: task.submissionNote,
         submittedAt: task.submittedAt,
         reviewedAt: task.reviewedAt,
+        lockType: task.lockType,
+        unlockAfterTaskId: task.unlockAfterTaskId,
+        unlockDate: task.unlockDate,
         attachments,
       };
     })

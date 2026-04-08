@@ -20,6 +20,14 @@ const internTaskSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Task description is required'],
     },
+    category: {
+      type: String,
+      default: '',
+    },
+    submissionNote: {
+      type: String,
+      default: '',
+    },
     status: {
       type: String,
       enum: ['locked', 'in_progress', 'pending', 'approved', 'rejected'],
