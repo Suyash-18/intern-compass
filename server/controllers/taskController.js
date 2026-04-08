@@ -277,6 +277,7 @@ exports.uploadAttachment = async (req, res, next) => {
       url: result.secure_url,
       publicId: result.public_id,
       mimeType: req.file.mimetype,
+      source: 'submission',
     });
 
     res.status(201).json({ attachment });
