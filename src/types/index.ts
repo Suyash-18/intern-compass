@@ -53,6 +53,8 @@ export interface Task {
   unlockAfterTaskId?: string;
   unlockDate?: string;
   attachments?: TaskAttachment[];
+  taskAttachments?: TaskAttachment[];
+  submissionAttachments?: TaskAttachment[];
 }
 
 export interface Intern {
