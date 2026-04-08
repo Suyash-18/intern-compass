@@ -46,26 +46,7 @@ exports.getTasks = async (req, res, next) => {
       }
     }
 
-    const tasksWithAttachments = await Promise.all(
-      tasks.map(async (task) => {
-        const attachments = await Attachment.find({ internTaskId: task._id });
-        return {
-          id: task._id,
-          title: task.title,
-          description: task.description,
-          category: task.category,
-          status: task.status,
-          feedback: task.feedback,
-          submissionNote: task.submissionNote,
-          submittedAt: task.submittedAt,
-          reviewedAt: task.reviewedAt,
-          lockType: task.lockType,
-          unlockAfterTaskId: task.unlockAfterTaskId,
-          unlockDate: task.unlockDate,
-          attachments,
-        };
-      })
-    );
+    const tasksWithAttachments = await Promise.all(tasks.map(buildTaskResponse));
 
     res.json({ tasks: tasksWithAttachments });
   } catch (error) {
