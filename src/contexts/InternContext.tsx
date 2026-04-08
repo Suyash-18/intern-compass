@@ -9,7 +9,7 @@ interface InternContextType {
   currentInternTasks: Task[];
   isLoading: boolean;
   setCurrentInternTasks: (tasks: Task[]) => void;
-  submitTask: (taskId: string, attachments?: TaskAttachment[]) => Promise<void>;
+  submitTask: (taskId: string, attachments?: TaskAttachment[], submissionNote?: string) => Promise<void>;
   reviewTask: (internId: string, taskId: string, status: 'approved' | 'rejected', feedback: string) => Promise<void>;
   getInternById: (id: string) => Intern | undefined;
   refreshInterns: () => Promise<void>;
