@@ -11,8 +11,8 @@ export default function Dashboard() {
   const { currentInternTasks, submitTask, isLoading } = useInterns();
   const { user } = useAuth();
 
-  const handleSubmit = async (taskId: string, attachments: TaskAttachment[]) => {
-    await submitTask(taskId, attachments);
+  const handleSubmit = async (taskId: string, attachments: TaskAttachment[], submissionNote: string) => {
+    await submitTask(taskId, attachments, submissionNote);
     toast({
       title: 'Task Submitted',
       description: `Your task has been submitted for admin review.`,
