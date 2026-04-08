@@ -270,6 +270,17 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
           </DialogHeader>
 
           <div className="space-y-4">
+            {/* Submission Note */}
+            <div>
+              <Label className="mb-2 block">Description / Notes</Label>
+              <Textarea
+                placeholder="Describe what you've done, any notes for the reviewer..."
+                value={submissionNote}
+                onChange={(e) => setSubmissionNote(e.target.value)}
+                className="min-h-[80px]"
+              />
+            </div>
+
             {/* Upload Area */}
             <div>
               <Label className="mb-2 block">Attachments</Label>
