@@ -347,11 +347,28 @@ exports.assignTask = async (req, res, next) => {
       const task = await InternTask.create({
         internId, taskTemplateId: template._id,
         title: template.title, description: template.description,
+        category: template.category || '',
         orderIndex: existingCount, lockType: resolvedLockType,
         unlockAfterTaskId: resolvedLockType === 'after_task' ? unlockAfterTaskId : null,
         unlockDate: resolvedLockType === 'until_date' ? unlockDate : null,
         status: initialStatus,
       });
+
+      // Copy template attachments to the new task
+      if (template.attachments && template.attachments.length > 0) {
+        for (const att of template.attachments) {
+          await Attachment.create({
+            internTaskId: task._id,
+            name: att.name,
+            type: att.type,
+            size: att.size,
+            url: att.url,
+            publicId: att.publicId || '',
+            mimeType: att.mimeType,
+          });
+        }
+      }
+
       tasks.push(task);
     }
 
