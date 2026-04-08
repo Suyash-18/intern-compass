@@ -143,6 +143,11 @@ export function AdminTaskDetailModal({ task, open, onOpenChange, onUpdateTask }:
             </div>
           )}
 
+          {/* Task Files (from template/admin) */}
+          {task.taskAttachments && task.taskAttachments.length > 0 && (
+            <DocumentPreview attachments={task.taskAttachments} label="Task Files (Assigned)" />
+          )}
+
           {/* Submission Details */}
           {(task.status === 'pending' || task.status === 'approved' || task.status === 'rejected') && (
             <div className="space-y-3">
@@ -153,17 +158,12 @@ export function AdminTaskDetailModal({ task, open, onOpenChange, onUpdateTask }:
                   <p className="whitespace-pre-wrap">{task.submissionNote}</p>
                 </div>
               )}
-              {task.attachments && task.attachments.length > 0 ? (
-                <DocumentPreview attachments={task.attachments} label="Submitted Files" />
+              {task.submissionAttachments && task.submissionAttachments.length > 0 ? (
+                <DocumentPreview attachments={task.submissionAttachments} label="Intern's Submitted Files" />
               ) : (
-                <p className="text-sm text-muted-foreground italic">No files submitted</p>
+                <p className="text-sm text-muted-foreground italic">No files submitted by intern</p>
               )}
             </div>
-          )}
-
-          {/* Attachments for non-submission states */}
-          {task.status !== 'pending' && task.status !== 'approved' && task.status !== 'rejected' && task.attachments && task.attachments.length > 0 && (
-            <DocumentPreview attachments={task.attachments} label="Task Files" />
           )}
 
           {/* Admin Controls */}

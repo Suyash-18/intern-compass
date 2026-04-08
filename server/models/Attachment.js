@@ -17,6 +17,11 @@ const attachmentSchema = new mongoose.Schema(
     url: { type: String, required: true },
     publicId: { type: String, default: '' }, // Cloudinary public_id for deletion
     mimeType: { type: String, required: true },
+    source: {
+      type: String,
+      enum: ['template', 'submission'],
+      default: 'template',
+    },
   },
   { timestamps: true }
 );

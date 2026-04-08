@@ -90,9 +90,22 @@ export function TaskDetailModal({ task, open, onOpenChange, onSubmit, showSubmit
             </div>
           )}
 
-          {/* Attachments - visible for all non-locked tasks */}
-          {!isLocked && task.attachments && task.attachments.length > 0 && (
-            <DocumentPreview attachments={task.attachments} label="Submitted Files" />
+          {/* Task Attachments (from template/admin) - visible for all non-locked tasks */}
+          {!isLocked && task.taskAttachments && task.taskAttachments.length > 0 && (
+            <DocumentPreview attachments={task.taskAttachments} label="Task Files" />
+          )}
+
+          {/* Submission Attachments (from intern) */}
+          {!isLocked && task.submissionAttachments && task.submissionAttachments.length > 0 && (
+            <DocumentPreview attachments={task.submissionAttachments} label="Your Submission" />
+          )}
+
+          {/* Submission Note */}
+          {!isLocked && task.submissionNote && (
+            <div className="p-3 rounded-lg bg-muted border text-sm">
+              <p className="font-medium text-xs text-muted-foreground mb-1">Submission Note</p>
+              <p className="whitespace-pre-wrap">{task.submissionNote}</p>
+            </div>
           )}
 
           {/* Submit Action */}

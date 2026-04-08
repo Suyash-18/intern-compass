@@ -13,7 +13,9 @@ const buildInternObject = async (user) => {
   // Get attachments for each task
   const tasksWithAttachments = await Promise.all(
     tasks.map(async (task) => {
-      const attachments = await Attachment.find({ internTaskId: task._id });
+      const allAttachments = await Attachment.find({ internTaskId: task._id });
+      const taskAttachments = allAttachments.filter(a => a.source === 'template');
+      const submissionAttachments = allAttachments.filter(a => a.source === 'submission');
       return {
         id: task._id,
         title: task.title,
@@ -27,7 +29,9 @@ const buildInternObject = async (user) => {
         lockType: task.lockType,
         unlockAfterTaskId: task.unlockAfterTaskId,
         unlockDate: task.unlockDate,
-        attachments,
+        attachments: allAttachments,
+        taskAttachments,
+        submissionAttachments,
       };
     })
   );

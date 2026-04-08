@@ -6,6 +6,31 @@ const path = require('path');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload');
 
 /**
+ * Build task response with separated attachments
+ */
+const buildTaskResponse = async (task) => {
+  const allAttachments = await Attachment.find({ internTaskId: task._id });
+  const taskAttachments = allAttachments.filter(a => a.source === 'template');
+  const submissionAttachments = allAttachments.filter(a => a.source === 'submission');
+  return {
+    id: task._id,
+    title: task.title,
+    description: task.description,
+    category: task.category,
+    status: task.status,
+    feedback: task.feedback,
+    submissionNote: task.submissionNote,
+    submittedAt: task.submittedAt,
+    reviewedAt: task.reviewedAt,
+    lockType: task.lockType,
+    unlockAfterTaskId: task.unlockAfterTaskId,
+    unlockDate: task.unlockDate,
+    attachments: allAttachments,
+    taskAttachments,
+    submissionAttachments,
+  };
+};
+
  * GET /api/v1/tasks
  */
 exports.getTasks = async (req, res, next) => {
@@ -21,26 +46,7 @@ exports.getTasks = async (req, res, next) => {
       }
     }
 
-    const tasksWithAttachments = await Promise.all(
-      tasks.map(async (task) => {
-        const attachments = await Attachment.find({ internTaskId: task._id });
-        return {
-          id: task._id,
-          title: task.title,
-          description: task.description,
-          category: task.category,
-          status: task.status,
-          feedback: task.feedback,
-          submissionNote: task.submissionNote,
-          submittedAt: task.submittedAt,
-          reviewedAt: task.reviewedAt,
-          lockType: task.lockType,
-          unlockAfterTaskId: task.unlockAfterTaskId,
-          unlockDate: task.unlockDate,
-          attachments,
-        };
-      })
-    );
+    const tasksWithAttachments = await Promise.all(tasks.map(buildTaskResponse));
 
     res.json({ tasks: tasksWithAttachments });
   } catch (error) {
@@ -56,19 +62,8 @@ exports.getTaskById = async (req, res, next) => {
     const task = await InternTask.findById(req.params.id);
     if (!task) return res.status(404).json({ message: 'Task not found.' });
 
-    const attachments = await Attachment.find({ internTaskId: task._id });
-    res.json({
-      task: {
-        id: task._id,
-        title: task.title,
-        description: task.description,
-        status: task.status,
-        feedback: task.feedback,
-        submittedAt: task.submittedAt,
-        reviewedAt: task.reviewedAt,
-        attachments,
-      },
-    });
+    const taskResponse = await buildTaskResponse(task);
+    res.json({ task: taskResponse });
   } catch (error) {
     next(error);
   }
@@ -172,15 +167,8 @@ exports.submitTask = async (req, res, next) => {
     }
     await task.save();
 
-    const attachments = await Attachment.find({ internTaskId: task._id });
-    res.json({
-      task: {
-        id: task._id, title: task.title, description: task.description,
-        status: task.status, feedback: task.feedback,
-        submissionNote: task.submissionNote,
-        submittedAt: task.submittedAt, reviewedAt: task.reviewedAt, attachments,
-      },
-    });
+    const taskResponse = await buildTaskResponse(task);
+    res.json({ task: taskResponse });
   } catch (error) {
     next(error);
   }
@@ -232,14 +220,8 @@ exports.reviewTask = async (req, res, next) => {
       }
     }
 
-    const attachments = await Attachment.find({ internTaskId: task._id });
-    res.json({
-      task: {
-        id: task._id, title: task.title, description: task.description,
-        status: task.status, feedback: task.feedback,
-        submittedAt: task.submittedAt, reviewedAt: task.reviewedAt, attachments,
-      },
-    });
+    const taskResponse = await buildTaskResponse(task);
+    res.json({ task: taskResponse });
   } catch (error) {
     next(error);
   }
@@ -277,6 +259,7 @@ exports.uploadAttachment = async (req, res, next) => {
       url: result.secure_url,
       publicId: result.public_id,
       mimeType: req.file.mimetype,
+      source: 'submission',
     });
 
     res.status(201).json({ attachment });
@@ -371,6 +354,7 @@ exports.assignTask = async (req, res, next) => {
             url: att.url,
             publicId: att.publicId || '',
             mimeType: att.mimeType,
+            source: 'template',
           });
         }
       }
@@ -432,6 +416,7 @@ exports.bulkAssign = async (req, res, next) => {
               url: att.url,
               publicId: att.publicId || '',
               mimeType: att.mimeType,
+              source: 'template',
             });
           }
         }
