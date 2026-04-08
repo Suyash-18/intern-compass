@@ -62,8 +62,8 @@ export function InternProvider({ children }: { children: React.ReactNode }) {
     load();
   }, [user, isAdmin, refreshInterns, refreshTasks]);
 
-  const submitTask = useCallback(async (taskId: string, attachments?: TaskAttachment[]) => {
-    const result = await taskService.submitTask(taskId, attachments);
+  const submitTask = useCallback(async (taskId: string, attachments?: TaskAttachment[], submissionNote?: string) => {
+    const result = await taskService.submitTask(taskId, attachments, submissionNote);
     if (result) {
       await refreshTasks();
     }

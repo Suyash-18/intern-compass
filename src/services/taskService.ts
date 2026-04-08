@@ -85,7 +85,7 @@ export const taskService = {
    * Request: { attachments?: TaskAttachment[] }
    * Response: { task: Task }
    */
-  async submitTask(taskId: string, attachments?: TaskAttachment[]): Promise<Task | null> {
+  async submitTask(taskId: string, attachments?: TaskAttachment[], submissionNote?: string): Promise<Task | null> {
     if (USE_MOCK_DATA) {
       await new Promise((resolve) => setTimeout(resolve, 300));
       const task = mockTasks.find((t) => t.id === taskId);
@@ -94,6 +94,7 @@ export const taskService = {
           ...task,
           status: 'pending' as TaskStatus,
           submittedAt: new Date().toISOString(),
+          submissionNote,
           attachments,
         };
       }
@@ -103,7 +104,7 @@ export const taskService = {
     try {
       const response = await apiService.post<TaskResponse>(
         API_ENDPOINTS.TASKS.SUBMIT(taskId),
-        { attachments }
+        { attachments, submissionNote }
       );
       return response.task;
     } catch {
