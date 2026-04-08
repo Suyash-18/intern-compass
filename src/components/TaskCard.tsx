@@ -142,9 +142,9 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
 
   const handleCloseDialog = () => {
     setShowSubmitDialog(false);
-    // Clean up object URLs
     attachments.forEach((a) => URL.revokeObjectURL(a.url));
     setAttachments([]);
+    setSubmissionNote('');
   };
 
   return (
