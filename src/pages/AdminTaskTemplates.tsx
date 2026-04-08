@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Plus, FileText, Edit2, Trash2, Copy, BookTemplate, LayoutTemplate, Paperclip, X, Download } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { templateService, type TaskTemplate, type TemplateAttachment } from '@/services/templateService';
 
 export default function AdminTaskTemplates() {
