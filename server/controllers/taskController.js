@@ -220,14 +220,8 @@ exports.reviewTask = async (req, res, next) => {
       }
     }
 
-    const attachments = await Attachment.find({ internTaskId: task._id });
-    res.json({
-      task: {
-        id: task._id, title: task.title, description: task.description,
-        status: task.status, feedback: task.feedback,
-        submittedAt: task.submittedAt, reviewedAt: task.reviewedAt, attachments,
-      },
-    });
+    const taskResponse = await buildTaskResponse(task);
+    res.json({ task: taskResponse });
   } catch (error) {
     next(error);
   }
