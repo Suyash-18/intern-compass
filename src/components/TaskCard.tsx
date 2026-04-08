@@ -134,9 +134,10 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
   };
 
   const handleSubmit = () => {
-    onSubmit?.(task.id, attachments);
+    onSubmit?.(task.id, attachments, submissionNote);
     setShowSubmitDialog(false);
     setAttachments([]);
+    setSubmissionNote('');
   };
 
   const handleCloseDialog = () => {
