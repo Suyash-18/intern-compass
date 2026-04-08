@@ -175,6 +175,7 @@ exports.submitTask = async (req, res, next) => {
       task: {
         id: task._id, title: task.title, description: task.description,
         status: task.status, feedback: task.feedback,
+        submissionNote: task.submissionNote,
         submittedAt: task.submittedAt, reviewedAt: task.reviewedAt, attachments,
       },
     });
