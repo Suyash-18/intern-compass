@@ -6,6 +6,31 @@ const path = require('path');
 const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinaryUpload');
 
 /**
+ * Build task response with separated attachments
+ */
+const buildTaskResponse = async (task) => {
+  const allAttachments = await Attachment.find({ internTaskId: task._id });
+  const taskAttachments = allAttachments.filter(a => a.source === 'template');
+  const submissionAttachments = allAttachments.filter(a => a.source === 'submission');
+  return {
+    id: task._id,
+    title: task.title,
+    description: task.description,
+    category: task.category,
+    status: task.status,
+    feedback: task.feedback,
+    submissionNote: task.submissionNote,
+    submittedAt: task.submittedAt,
+    reviewedAt: task.reviewedAt,
+    lockType: task.lockType,
+    unlockAfterTaskId: task.unlockAfterTaskId,
+    unlockDate: task.unlockDate,
+    attachments: allAttachments,
+    taskAttachments,
+    submissionAttachments,
+  };
+};
+
  * GET /api/v1/tasks
  */
 exports.getTasks = async (req, res, next) => {
