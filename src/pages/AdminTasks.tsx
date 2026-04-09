@@ -267,11 +267,61 @@ export default function AdminTasks() {
               <DialogTitle>Review Task Submission</DialogTitle>
               <DialogDescription>{selectedTask?.intern.profile.name} - {selectedTask?.task.title}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="bg-muted p-4 rounded-xl">
                 <h4 className="font-medium text-sm mb-2">Task Description</h4>
                 <p className="text-sm text-muted-foreground">{selectedTask?.task.description}</p>
               </div>
+
+              {/* Task Files in review dialog */}
+              {selectedTask?.task.taskAttachments && selectedTask.task.taskAttachments.length > 0 && (
+                <div className="p-4 bg-muted rounded-xl">
+                  <p className="text-sm font-medium mb-2">Task Files</p>
+                  <div className="space-y-2">
+                    {selectedTask.task.taskAttachments.map((att) => {
+                      const Icon = getFileIcon(att.type);
+                      return (
+                        <div key={att.id} className="flex items-center justify-between p-2 bg-card rounded-lg border">
+                          <div className="flex items-center gap-2 min-w-0"><Icon className="h-4 w-4 text-muted-foreground" /><span className="text-sm truncate">{att.name}</span></div>
+                          <div className="flex gap-1">
+                            {(att.type === 'image' || att.type === 'pdf') && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePreview(att)}><Eye className="h-3.5 w-3.5" /></Button>}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(att)}><Download className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Submission Files in review dialog */}
+              {selectedTask?.task.submissionAttachments && selectedTask.task.submissionAttachments.length > 0 && (
+                <div className="p-4 bg-primary/5 rounded-xl border border-primary/20">
+                  <p className="text-sm font-medium text-primary mb-2">Intern's Submitted Files</p>
+                  <div className="space-y-2">
+                    {selectedTask.task.submissionAttachments.map((att) => {
+                      const Icon = getFileIcon(att.type);
+                      return (
+                        <div key={att.id} className="flex items-center justify-between p-2 bg-card rounded-lg border">
+                          <div className="flex items-center gap-2 min-w-0"><Icon className="h-4 w-4 text-primary" /><span className="text-sm truncate">{att.name}</span></div>
+                          <div className="flex gap-1">
+                            {(att.type === 'image' || att.type === 'pdf') && <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handlePreview(att)}><Eye className="h-3.5 w-3.5" /></Button>}
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownload(att)}><Download className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Submission Note in review dialog */}
+              {selectedTask?.task.submissionNote && (
+                <div className="p-3 bg-muted rounded-lg border text-sm">
+                  <p className="font-medium text-xs text-muted-foreground mb-1">Intern's Note</p>
+                  <p className="whitespace-pre-wrap">{selectedTask.task.submissionNote}</p>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Feedback / Remarks</Label>
                 <Textarea placeholder="Add feedback for the intern..." value={feedback} onChange={(e) => setFeedback(e.target.value)} rows={3} className="resize-none" />
