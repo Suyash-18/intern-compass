@@ -103,6 +103,7 @@ export function TaskCard({ task, index, onSubmit }: TaskCardProps) {
         size: file.size,
         url: URL.createObjectURL(file),
         mimeType: file.type,
+        file,
       });
     });
 

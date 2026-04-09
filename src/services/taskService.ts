@@ -82,7 +82,7 @@ export const taskService = {
    * Submit task for review
    * POST /tasks/:id/submit
    * 
-   * Request: { attachments?: TaskAttachment[] }
+   * Request: { submissionNote?: string }
    * Response: { task: Task }
    */
   async submitTask(taskId: string, attachments?: TaskAttachment[], submissionNote?: string): Promise<Task | null> {
@@ -95,7 +95,7 @@ export const taskService = {
           status: 'pending' as TaskStatus,
           submittedAt: new Date().toISOString(),
           submissionNote,
-          attachments,
+          submissionAttachments: attachments,
         };
       }
       return null;
@@ -104,7 +104,7 @@ export const taskService = {
     try {
       const response = await apiService.post<TaskResponse>(
         API_ENDPOINTS.TASKS.SUBMIT(taskId),
-        { attachments, submissionNote }
+        { submissionNote }
       );
       return response.task;
     } catch {
