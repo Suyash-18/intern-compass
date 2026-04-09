@@ -37,6 +37,7 @@ export interface TaskAttachment {
   size: number;
   url: string;
   mimeType: string;
+  file?: File;
 }
 
 export interface Task {

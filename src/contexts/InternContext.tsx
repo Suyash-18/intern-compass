@@ -64,9 +64,18 @@ export function InternProvider({ children }: { children: React.ReactNode }) {
 
   const submitTask = useCallback(async (taskId: string, attachments?: TaskAttachment[], submissionNote?: string) => {
     const result = await taskService.submitTask(taskId, attachments, submissionNote);
-    if (result) {
-      await refreshTasks();
+
+    if (!result) return;
+
+    const filesToUpload = (attachments ?? [])
+      .map((attachment) => attachment.file)
+      .filter((file): file is File => file instanceof File);
+
+    if (filesToUpload.length > 0) {
+      await Promise.all(filesToUpload.map((file) => taskService.uploadAttachment(taskId, file)));
     }
+
+    await refreshTasks();
   }, [refreshTasks]);
 
   const reviewTask = useCallback(
