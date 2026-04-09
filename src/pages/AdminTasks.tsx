@@ -150,14 +150,16 @@ export default function AdminTasks() {
                   </CardHeader>
                   <CardContent>
                     <CardDescription className="mb-4">{item.task.description}</CardDescription>
-                    {item.task.attachments && item.task.attachments.length > 0 && (
+
+                    {/* Task Files (from template/admin) */}
+                    {item.task.taskAttachments && item.task.taskAttachments.length > 0 && (
                       <div className="mb-4 p-4 bg-muted rounded-xl">
                         <div className="flex items-center gap-2 mb-3">
                           <Paperclip className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm font-medium">Attached Files ({item.task.attachments.length})</span>
+                          <span className="text-sm font-medium">Task Files ({item.task.taskAttachments.length})</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {item.task.attachments.map((attachment) => {
+                          {item.task.taskAttachments.map((attachment) => {
                             const Icon = getFileIcon(attachment.type);
                             return (
                               <div key={attachment.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
@@ -178,6 +180,46 @@ export default function AdminTasks() {
                             );
                           })}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Submission Files (from intern) */}
+                    {item.task.submissionAttachments && item.task.submissionAttachments.length > 0 && (
+                      <div className="mb-4 p-4 bg-primary/5 rounded-xl border border-primary/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Paperclip className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-medium text-primary">Intern's Submitted Files ({item.task.submissionAttachments.length})</span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {item.task.submissionAttachments.map((attachment) => {
+                            const Icon = getFileIcon(attachment.type);
+                            return (
+                              <div key={attachment.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><Icon className="h-5 w-5 text-primary" /></div>
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate">{attachment.name}</p>
+                                    <p className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</p>
+                                  </div>
+                                </div>
+                                <div className="flex gap-1">
+                                  {(attachment.type === 'image' || attachment.type === 'pdf') && (
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handlePreview(attachment)}><Eye className="h-4 w-4" /></Button>
+                                  )}
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDownload(attachment)}><Download className="h-4 w-4" /></Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Submission Note */}
+                    {item.task.submissionNote && (
+                      <div className="mb-4 p-3 bg-muted rounded-lg border text-sm">
+                        <p className="font-medium text-xs text-muted-foreground mb-1">Intern's Note</p>
+                        <p className="whitespace-pre-wrap">{item.task.submissionNote}</p>
                       </div>
                     )}
                     <div className="flex items-center justify-between">
