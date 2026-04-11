@@ -44,7 +44,9 @@ export default function AdminTasks() {
 
   const pendingTasks: PendingTask[] = interns.flatMap((intern) =>
     intern.tasks.map((task, index) => ({ intern, task, taskIndex: index })).filter((item) => item.task.status === 'pending')
-  );
+);
+  console.log(pendingTasks)
+
 
   const reviewedTasks: PendingTask[] = interns.flatMap((intern) =>
     intern.tasks.map((task, index) => ({ intern, task, taskIndex: index }))

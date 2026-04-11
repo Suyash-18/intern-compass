@@ -31,8 +31,7 @@ const buildTaskResponse = async (task) => {
   };
 };
 
- * GET /api/v1/tasks
- */
+ /* GET /api/v1/tasks */
 exports.getTasks = async (req, res, next) => {
   try {
     const tasks = await InternTask.find({ internId: req.user._id }).sort('orderIndex');
