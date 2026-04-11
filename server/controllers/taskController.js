@@ -37,12 +37,42 @@ exports.getTasks = async (req, res, next) => {
   try {
     const tasks = await InternTask.find({ internId: req.user._id }).sort('orderIndex');
 
-    // Auto-unlock date-based tasks
     const now = new Date();
     for (const task of tasks) {
-      if (task.status === 'locked' && task.lockType === 'until_date' && task.unlockDate && new Date(task.unlockDate) <= now) {
+      if (task.status !== 'locked') continue;
+
+      // Auto-unlock date-based tasks
+      if (task.lockType === 'until_date' && task.unlockDate && new Date(task.unlockDate) <= now) {
         task.status = 'in_progress';
         await task.save();
+        continue;
+      }
+
+      // Auto-unlock after_task tasks
+      if (task.lockType === 'after_task' && task.unlockAfterTaskId) {
+        const depTask = await InternTask.findById(task.unlockAfterTaskId);
+        if (depTask && depTask.status === 'approved') {
+          task.status = 'in_progress';
+          await task.save();
+          continue;
+        }
+      }
+
+      // Auto-unlock sequential tasks (check all prior tasks approved)
+      if (task.lockType === 'sequential') {
+        const taskIndex = tasks.findIndex(t => t._id.equals(task._id));
+        if (taskIndex === 0) {
+          task.status = 'in_progress';
+          await task.save();
+          continue;
+        }
+        const allPriorDone = tasks.slice(0, taskIndex).every(
+          t => t.status === 'approved' || t.lockType === 'open'
+        );
+        if (allPriorDone) {
+          task.status = 'in_progress';
+          await task.save();
+        }
       }
     }
 
