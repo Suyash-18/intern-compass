@@ -196,7 +196,7 @@ exports.reviewTask = async (req, res, next) => {
     await task.save();
 
     if (status === 'approved') {
-      // Unlock tasks that depend on this specific task
+      // 1. Unlock tasks that depend on this specific task (after_task lock type)
       const dependentTasks = await InternTask.find({
         internId: task.internId, lockType: 'after_task',
         unlockAfterTaskId: task._id, status: 'locked',
@@ -206,16 +206,25 @@ exports.reviewTask = async (req, res, next) => {
         await depTask.save();
       }
 
-      // Unlock next sequential task
-      const allTasks = await InternTask.find({
-        internId: task.internId, lockType: 'sequential',
-      }).sort('orderIndex');
+      // 2. Unlock next sequential task by orderIndex
+      // Find ALL tasks for this intern sorted by order, then find the next locked sequential one
+      const allTasks = await InternTask.find({ internId: task.internId }).sort('orderIndex');
       const currentIndex = allTasks.findIndex((t) => t._id.equals(task._id));
-      if (currentIndex !== -1 && currentIndex + 1 < allTasks.length) {
-        const nextTask = allTasks[currentIndex + 1];
-        if (nextTask.status === 'locked') {
-          nextTask.status = 'in_progress';
-          await nextTask.save();
+      if (currentIndex !== -1) {
+        // Look for the next task(s) after current that are sequential and locked
+        for (let i = currentIndex + 1; i < allTasks.length; i++) {
+          const nextTask = allTasks[i];
+          if (nextTask.lockType === 'sequential' && nextTask.status === 'locked') {
+            // Check all tasks before it are approved
+            const allPriorApproved = allTasks.slice(0, i).every(
+              (t) => t.status === 'approved' || t.lockType === 'open'
+            );
+            if (allPriorApproved) {
+              nextTask.status = 'in_progress';
+              await nextTask.save();
+            }
+            break; // Only unlock the first eligible sequential task
+          }
         }
       }
     }
