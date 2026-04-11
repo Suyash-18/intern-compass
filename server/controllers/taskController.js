@@ -37,12 +37,42 @@ exports.getTasks = async (req, res, next) => {
   try {
     const tasks = await InternTask.find({ internId: req.user._id }).sort('orderIndex');
 
-    // Auto-unlock date-based tasks
     const now = new Date();
     for (const task of tasks) {
-      if (task.status === 'locked' && task.lockType === 'until_date' && task.unlockDate && new Date(task.unlockDate) <= now) {
+      if (task.status !== 'locked') continue;
+
+      // Auto-unlock date-based tasks
+      if (task.lockType === 'until_date' && task.unlockDate && new Date(task.unlockDate) <= now) {
         task.status = 'in_progress';
         await task.save();
+        continue;
+      }
+
+      // Auto-unlock after_task tasks
+      if (task.lockType === 'after_task' && task.unlockAfterTaskId) {
+        const depTask = await InternTask.findById(task.unlockAfterTaskId);
+        if (depTask && depTask.status === 'approved') {
+          task.status = 'in_progress';
+          await task.save();
+          continue;
+        }
+      }
+
+      // Auto-unlock sequential tasks (check all prior tasks approved)
+      if (task.lockType === 'sequential') {
+        const taskIndex = tasks.findIndex(t => t._id.equals(task._id));
+        if (taskIndex === 0) {
+          task.status = 'in_progress';
+          await task.save();
+          continue;
+        }
+        const allPriorDone = tasks.slice(0, taskIndex).every(
+          t => t.status === 'approved' || t.lockType === 'open'
+        );
+        if (allPriorDone) {
+          task.status = 'in_progress';
+          await task.save();
+        }
       }
     }
 
@@ -196,7 +226,7 @@ exports.reviewTask = async (req, res, next) => {
     await task.save();
 
     if (status === 'approved') {
-      // Unlock tasks that depend on this specific task
+      // 1. Unlock tasks that depend on this specific task (after_task lock type)
       const dependentTasks = await InternTask.find({
         internId: task.internId, lockType: 'after_task',
         unlockAfterTaskId: task._id, status: 'locked',
@@ -206,16 +236,25 @@ exports.reviewTask = async (req, res, next) => {
         await depTask.save();
       }
 
-      // Unlock next sequential task
-      const allTasks = await InternTask.find({
-        internId: task.internId, lockType: 'sequential',
-      }).sort('orderIndex');
+      // 2. Unlock next sequential task by orderIndex
+      // Find ALL tasks for this intern sorted by order, then find the next locked sequential one
+      const allTasks = await InternTask.find({ internId: task.internId }).sort('orderIndex');
       const currentIndex = allTasks.findIndex((t) => t._id.equals(task._id));
-      if (currentIndex !== -1 && currentIndex + 1 < allTasks.length) {
-        const nextTask = allTasks[currentIndex + 1];
-        if (nextTask.status === 'locked') {
-          nextTask.status = 'in_progress';
-          await nextTask.save();
+      if (currentIndex !== -1) {
+        // Look for the next task(s) after current that are sequential and locked
+        for (let i = currentIndex + 1; i < allTasks.length; i++) {
+          const nextTask = allTasks[i];
+          if (nextTask.lockType === 'sequential' && nextTask.status === 'locked') {
+            // Check all tasks before it are approved
+            const allPriorApproved = allTasks.slice(0, i).every(
+              (t) => t.status === 'approved' || t.lockType === 'open'
+            );
+            if (allPriorApproved) {
+              nextTask.status = 'in_progress';
+              await nextTask.save();
+            }
+            break; // Only unlock the first eligible sequential task
+          }
         }
       }
     }
